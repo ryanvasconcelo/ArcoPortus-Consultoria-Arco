@@ -1,0 +1,59 @@
+services:
+  cga_db:
+    image: postgres:latest
+    container_name: cga_postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - cga_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: cga_backend_api
+    ports:
+      - "3333:3333"
+      - "5555:5555" # Prisma Studio
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      cga_db:
+        condition: service_healthy
+    # A mágica acontece aqui: construímos a DATABASE_URL para o container,
+    # usando as variáveis do banco e o nome do serviço 'cga_db' como host.
+    # Isso libera o .env para ser usado por comandos locais (como o seed).
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@cga_db:5432/${DB_NAME}?schema=public"
+      JWT_SECRET: ${JWT_SECRET}
+    restart: unless-stopped
+    command: sh -c "npm install && npx prisma migrate deploy && npx prisma generate && npm run dev"
+
+  frontend:
+    image: node:20-alpine
+    container_name: cga_frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Isola o node_modules para evitar conflitos
+    restart: unless-stopped
+    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+
+# --- DECLARAÇÃO DE VOLUMES ---
+# ESTE BLOCO É CRUCIAL E DEVE TER INDENTAÇÃO ZERO.
+# ELE PRECISA ESTAR NO MESMO NÍVEL DE 'services'.
+volumes:
+  cga_postgres_data:

@@ -1,9 +1,9 @@
 // backend/src/index.ts
 import express from 'express';
-import { prisma } from './lib/prisma';
+import { prisma } from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'; // <<< ADICIONE ESTA IMPORTAÇÃO
-import { authMiddleware } from './middleware/auth'; // <<< IMPORTE O MIDDLEWARE
+import { authMiddleware } from '../middleware/auth'; // <<< IMPORTE O MIDDLEWARE
 
 const app = express();
 const port = 3001;
@@ -19,7 +19,6 @@ app.get('/', (req, res) => {
 // Rota para cadastrar um novo usuário
 app.post('/users', async (req, res) => {
     try {
-        x
         // 1. Pega os dados do corpo da requisição (agora com 'company')
         const { email, password, company } = req.body;
 

@@ -1,6 +1,8 @@
 import { Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UserProfileCard } from "@/components/UserProfileCard";
+import ArcoPortusLogo from "@/assets/arco-portus-logo.png";
 
 const Header = () => {
   return (
@@ -9,46 +11,63 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <div className="text-2xl font-bold">
-              <span className="text-secondary">CGA</span>
-            </div>
-            <div className="text-xs text-muted-foreground hidden sm:block">
-              CENTRAL DE GESTÃO ARCO
-            </div>
+            <img src={ArcoPortusLogo} alt="" className="h-12 w-auto" />
           </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="/" className="text-foreground hover:text-primary transition-colors font-medium">
+            <a
+              href="/"
+              className={`transition-colors font-medium ${window.location.pathname === '/'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-foreground hover:text-primary'
+                }`}
+            >
               INÍCIO
             </a>
-            <a href="/admin/users" className="text-foreground hover:text-primary transition-colors font-medium">
-              USUÁRIOS
+            <a
+              href="/gestao-arquivos"
+              className={`transition-colors font-medium ${window.location.pathname === '/admin/users'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-foreground hover:text-primary'
+                }`}
+            >
+              GESTÃO DE ARQUIVOS
             </a>
-            <a href="#" className="text-foreground hover:text-primary transition-colors font-medium">
-              CATÁLOGO DE SOLUÇÕES
-            </a>
-            <a href="#" className="text-foreground hover:text-primary transition-colors font-medium">
+            <a
+              href="/canal-denuncias"
+              className={`transition-colors font-medium ${window.location.pathname === '/canal-denuncias'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-foreground hover:text-primary'
+                }`}
+            >
               CANAL DE DENÚNCIAS
             </a>
-            <a href="/contato" className="text-foreground hover:text-primary transition-colors font-medium">
+            <a
+              href="/contato"
+              className={`transition-colors font-medium ${window.location.pathname === '/contato'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-foreground hover:text-primary'
+                }`}
+            >
               FALE CONOSCO
             </a>
           </nav>
 
-          {/* Search and Actions */}
+          {/* Actions */}
           <div className="flex items-center space-x-4">
-            <div className="relative hidden lg:block">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search"
-                className="pl-10 w-64 bg-muted border-border"
-              />
-            </div>
-            <Button variant="default" size="sm" className="btn-primary">
-              <User className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <UserProfileCard
+              user={{
+                name: "João Silva",
+                email: "joao.silva@empresa.com",
+                role: "ADMIN",
+                company: "Porto Chibatão S.A."
+              }}
+              onLogout={() => {
+                // Handle logout
+                console.log("Logout clicked");
+              }}
+            />
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="h-5 w-5" />
             </Button>

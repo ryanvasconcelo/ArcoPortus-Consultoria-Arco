@@ -16,7 +16,7 @@ export function UserForm({ user, onClose, onSubmit }: UserFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "MEMBER",
+    role: "USER",
     status: "active"
   });
 
@@ -25,7 +25,7 @@ export function UserForm({ user, onClose, onSubmit }: UserFormProps) {
       setFormData({
         name: user.name || "",
         email: user.email || "",
-        role: user.role || "MEMBER",
+        role: user.role || "USER",
         status: user.status || "active"
       });
     }
@@ -54,7 +54,7 @@ export function UserForm({ user, onClose, onSubmit }: UserFormProps) {
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -91,7 +91,7 @@ export function UserForm({ user, onClose, onSubmit }: UserFormProps) {
                 className="w-full px-3 py-2 rounded-md border border-input bg-background/50 backdrop-blur-sm"
                 required
               >
-                <option value="MEMBER">Usuário (MEMBER)</option>
+                <option value="USER">Usuário (USER)</option>
                 <option value="ADMIN">Administrador (ADMIN)</option>
               </select>
               <div className="text-xs text-muted-foreground mt-1">

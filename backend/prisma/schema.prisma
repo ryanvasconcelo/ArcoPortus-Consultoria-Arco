@@ -1,21 +1,92 @@
-// Define o gerador de cliente do Prisma (para TypeScript)
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
-// Define a fonte de dados (nosso banco Postgres)
-// A URL é lida do arquivo .env que acabamos de configurar
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Define nosso primeiro modelo de dados: a tabela de Usuários
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  products Companyproduct[] // Serviços que esta empresa assinou
+
+  @@map("companies")
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
-  company   String   // Trocamos 'name' por 'company' e tornamos obrigatório
   password  String
+  role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  products Userproduct[] // Acesso do usuário aos serviços
+
+  @@map("users")
+}
+
+model product {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companies Companyproduct[]
+
+  @@map("products")
+}
+
+// Tabela Pivot: Quais serviços uma empresa assinou
+model Companyproduct {
+  id        String @id @default(uuid())
+  companyId String
+  productId String
+
+  // Aqui podemos adicionar as configurações de personalização
+  // settings  Json?
+
+  company Company @relation(fields: [companyId], references: [id])
+  product product @relation(fields: [productId], references: [id])
+
+  userAccess Userproduct[]
+
+  @@unique([companyId, productId])
+  @@map("company_products")
+}
+
+// Tabela Pivot: A qual serviço um usuário tem acesso
+model Userproduct {
+  id               String @id @default(uuid())
+  userId           String
+  companyproductId String
+
+  user           User           @relation(fields: [userId], references: [id])
+  companyproduct Companyproduct @relation(fields: [companyproductId], references: [id])
+
+  // Aqui podemos adicionar permissões mais granulares no futuro
+  // permissions Json?
+
+  @@unique([userId, companyproductId])
+  @@map("user_products")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
 }

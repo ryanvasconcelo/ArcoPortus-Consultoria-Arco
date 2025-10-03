@@ -1,52 +1,60 @@
-# ./docker-compose.yml
-
-version: '3.8'
-
 services:
-  # Serviço do Banco de Dados PostgreSQL
-  postgres:
-    image: postgres:16-alpine
-    container_name: cga_postgres_db
+  cga_db:
+    image: postgres:latest
+    container_name: arco_portus_postgres_db
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "5433:5432" # Mapeia a porta 5433 do host para a 5432 do contêiner
     volumes:
       - cga_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Serviço do Backend (Node.js/Express/Prisma)
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev # Usaremos um Dockerfile específico para desenvolvimento
-    container_name: cga_backend_api
-    ports:
-      - "3333:3333" # Porta da API
-    volumes:
-      - ./backend:/usr/app
-      - /usr/app/node_modules # Evita que o node_modules local sobrescreva o do container
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      # Outras variáveis de ambiente (JWT_SECRET, etc)
-    restart: unless-stopped
-
-  # Serviço do Frontend (React/Vite)
-  frontend:
-    build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile.dev
-    container_name: cga_frontend_app
+    container_name: arco_portus_backend_api
     ports:
-      - "5173:5173" # Porta padrão do Vite
+      - "3334:3001" # Expõe a porta 3001 do container na 3334 da sua máquina
+      - "5556:5555" # Prisma Studio agora na porta 5556 da sua máquina
+    working_dir: /app
     volumes:
-      - ./frontend:/usr/app
-      - /usr/app/node_modules
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      cga_db:
+        condition: service_healthy
+    # A mágica acontece aqui: construímos a DATABASE_URL para o container,
+    # usando as variáveis do banco e o nome do serviço 'cga_db' como host.
+    # Isso libera o .env para ser usado por comandos locais (como o seed).
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@arco_portus_postgres_db:5432/${DB_NAME}?schema=public"
+      JWT_SECRET: ${JWT_SECRET}
     restart: unless-stopped
+    command: sh -c "npm install && npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && npx prisma generate --schema=./backend/prisma/schema.prisma && npm run dev"
 
+  frontend:
+    image: node:20-alpine
+    container_name: arco_portus_frontend
+    working_dir: /app
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Isola o node_modules para evitar conflitos com o host
+    restart: unless-stopped
+    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+
+# --- DECLARAÇÃO DE VOLUMES ---
+# ESTE BLOCO É CRUCIAL E DEVE TER INDENTAÇÃO ZERO.
+# ELE PRECISA ESTAR NO MESMO NÍVEL DE 'services'.
 volumes:
   cga_postgres_data:

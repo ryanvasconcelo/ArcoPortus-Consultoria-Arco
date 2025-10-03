@@ -1,0 +1,20 @@
+# Arquivos de dependências
+node_modules/
+/backend/node_modules
+/frontend/node_modules
+
+# Arquivos de build e log
+/frontend/dist
+npm-debug.log
+yarn-error.log
+bun.lockb
+
+# Arquivos de ambiente - NUNCA ENVIE PARA O GITHUB
+.env
+.env*.local
+.env.development
+.env.production
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
