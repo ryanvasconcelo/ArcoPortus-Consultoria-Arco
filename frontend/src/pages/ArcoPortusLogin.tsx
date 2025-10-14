@@ -1,37 +1,81 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import arcoPortusLogo from "@/assets/arco-portus-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+// --- MODIFICAÇÃO INÍCIO ---
+import { ForgotPasswordModal } from "@/components/ForgotPasswordModal"; // 1. Importa o novo modal
+import api from "@/services/api"; // 2. Importa nossa instância da API
+// --- MODIFICAÇÃO FIM ---
 
 const ArcoPortusLogin = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  // --- MODIFICAÇÃO INÍCIO ---
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false); // 3. Estado para controlar o modal
+  // --- MODIFICAÇÃO FIM ---
 
-  const handleLogin = (e: React.FormEvent) => {
+  const { signIn } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignIn = async (e: FormEvent) => {
     e.preventDefault();
-    navigate("/arco-portus");
+    setIsLoading(true);
+
+    try {
+      await signIn({ email, password });
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Falha no login:", error);
+      toast({
+        variant: "destructive",
+        title: "Falha na autenticação",
+        description: "Credenciais inválidas. Verifique seu e-mail e senha.",
+      });
+      setIsLoading(false);
+    }
   };
+
+  // --- MODIFICAÇÃO INÍCIO ---
+  // 4. Nova função para lidar com o envio do modal de "Esqueci minha senha"
+  const handleForgotPasswordSubmit = async (forgotEmail: string) => {
+    try {
+      // Chama nosso novo endpoint no backend
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+
+      toast({
+        title: "Verifique seu e-mail",
+        description: "Se o e-mail estiver cadastrado, um link para redefinição foi enviado.",
+      });
+      setIsForgotModalOpen(false); // Fecha o modal após o sucesso
+    } catch (error) {
+      console.error("Erro ao solicitar redefinição:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível processar sua solicitação no momento.",
+      });
+    }
+  };
+  // --- MODIFICAÇÃO FIM ---
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Enhanced Animated Background */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-10"></div>
         <div className="absolute top-20 left-10 w-96 h-96 bg-secondary/30 rounded-full filter blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-primary/30 rounded-full filter blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
-
-      {/* Main Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-7xl grid lg:grid-cols-[1.1fr,1fr] gap-16 items-center">
-
-          {/* Left Side - Enhanced Branding */}
           <div className="text-white space-y-10">
             <div className="space-y-6 animate-fade-in">
               <div className="inline-block">
@@ -47,8 +91,6 @@ const ArcoPortusLogin = () => {
                 Ecossistema completo de soluções integradas para transformar a gestão do seu negócio
               </p>
             </div>
-
-            {/* Enhanced Services Grid */}
             <div className="grid grid-cols-2 gap-3 pt-4">
               {[
                 { name: "Arco Portus", desc: "Documentação portuária", color: "from-yellow-500 to-yellow-600", logo: arcoPortusLogo },
@@ -78,10 +120,7 @@ const ArcoPortusLogin = () => {
               ))}
             </div>
           </div>
-
-          {/* Right Side - Enhanced Login Form */}
           <div className="relative">
-            {/* Glass effect background */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl"></div>
             <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20 animate-scale-in">
               <div className="mb-10 text-center">
@@ -93,7 +132,7 @@ const ArcoPortusLogin = () => {
                 <p className="text-gray-500 text-base">Acesse sua conta para continuar</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleSignIn} className="space-y-6">
                 <div className="space-y-3">
                   <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email</Label>
                   <Input
@@ -104,6 +143,7 @@ const ArcoPortusLogin = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl text-base transition-all"
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -118,6 +158,7 @@ const ArcoPortusLogin = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl pr-14 text-base transition-all"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
@@ -132,18 +173,27 @@ const ArcoPortusLogin = () => {
                 <Button
                   type="submit"
                   className="w-full h-14 bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                  disabled={isLoading}
                 >
-                  Acessar Plataforma
+                  {isLoading ? "Acessando..." : "Acessar Plataforma"}
                 </Button>
 
                 <div className="text-center pt-2">
-                  <a href="#" className="text-sm text-secondary hover:text-secondary/80 font-medium transition-colors">
+                  {/* --- MODIFICAÇÃO INÍCIO --- */}
+                  {/* 5. Conecta o link para abrir o modal */}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsForgotModalOpen(true);
+                    }}
+                    className="text-sm text-secondary hover:text-secondary/80 font-medium transition-colors"
+                  >
                     Esqueci minha senha →
                   </a>
+                  {/* --- MODIFICAÇÃO FIM --- */}
                 </div>
               </form>
-
-              {/* Enhanced Certifications */}
               <div className="mt-10 pt-8 border-t border-gray-200">
                 <p className="text-xs text-gray-400 text-center mb-4">Certificações e Conformidades</p>
                 <div className="flex justify-center items-center gap-8">
@@ -165,11 +215,19 @@ const ArcoPortusLogin = () => {
           </div>
         </div>
       </div>
-
-      {/* Enhanced Footer */}
       <div className="absolute bottom-6 left-0 right-0 text-center text-white/40 text-sm z-10">
         <p>© 2024 Arco Consultoria em Segurança - Todos os direitos reservados</p>
       </div>
+
+      {/* --- MODIFICAÇÃO INÍCIO --- */}
+      {/* 6. Renderiza o modal condicionalmente */}
+      {isForgotModalOpen && (
+        <ForgotPasswordModal
+          onClose={() => setIsForgotModalOpen(false)}
+          onSubmit={handleForgotPasswordSubmit}
+        />
+      )}
+      {/* --- MODIFICAÇÃO FIM --- */}
     </div>
   );
 };

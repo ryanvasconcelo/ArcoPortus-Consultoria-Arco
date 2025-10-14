@@ -4,6 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+// ✅ 1. Importe o AuthProvider e o ProtectedRoute
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedLayout } from "./components/routes/ProtectedRoute";
+
 // General Pages
 import Contact from "./pages/Contact";
 import WhistleblowerChannel from "./pages/WhistleblowerChannel";
@@ -11,6 +15,8 @@ import NotFound from "./pages/NotFound";
 import CondicoesUso from "./pages/CondicoesUso";
 import PoliticaCookies from "./pages/PoliticaCookies";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
+import { FirstLoginGate } from "./components/routes/FirstLoginGate";
+import FirstAccessChangePassword from "./pages/FirstAccessChangePassword";
 
 // App Pages
 import ArcoPortusHome from "./pages/ArcoPortusHome";
@@ -33,34 +39,44 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* General Routes */}
-          <Route path="/" element={<ArcoPortusHome />} />
-          <Route path="/contato" element={<Contact />} />
-          <Route path="/canal-denuncias" element={<WhistleblowerChannel />} />
-          <Route path="/condicoes-uso" element={<CondicoesUso />} />
-          <Route path="/politica-cookies" element={<PoliticaCookies />} />
-          <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* --- GRUPO DE ROTAS PÚBLICAS --- */}
+            {/* Apenas a rota de login é verdadeiramente pública */}
+            <Route path="/login" element={<ArcoPortusLogin />} />
+            <Route path="/primeiro-acesso" element={<FirstAccessChangePassword />} />
 
-          {/* App Routes */}
-          <Route path="/login" element={<ArcoPortusLogin />} />
-          <Route path="/home" element={<ArcoPortusHome />} />
-          <Route path="/gestao-arquivos" element={<GestaoArquivos />} />
-          <Route path="/aresp" element={<ARESP />} />
-          <Route path="/diagnostico-ear" element={<DiagnosticoEAR />} />
-          <Route path="/normas-procedimentos" element={<NormasProcedimentos />} />
-          <Route path="/documentos-registros" element={<DocumentosRegistros />} />
-          <Route path="/gestao-rotinas" element={<GestaoRotinas />} />
-          <Route path="/legislacao" element={<Legislacao />} />
-          <Route path="/sistema-cftv" element={<SistemaCFTV />} />
-          <Route path="/auditoria" element={<Auditoria />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+            {/* --- GRUPO DE ROTAS PROTEGIDAS --- */}
+            {/* O componente ProtectedLayout é o "porteiro" de todas as rotas aninhadas abaixo dele */}
+            <Route element={<ProtectedLayout />}>
+              <Route element={<FirstLoginGate />}>
+                <Route path="/" element={<ArcoPortusHome />} />
+                <Route path="/home" element={<ArcoPortusHome />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/gestao-arquivos" element={<GestaoArquivos />} />
+                <Route path="/aresp" element={<ARESP />} />
+                <Route path="/diagnostico-ear" element={<DiagnosticoEAR />} />
+                <Route path="/normas-procedimentos" element={<NormasProcedimentos />} />
+                <Route path="/documentos-registros" element={<DocumentosRegistros />} />
+                <Route path="/gestao-rotinas" element={<GestaoRotinas />} />
+                <Route path="/legislacao" element={<Legislacao />} />
+                <Route path="/sistema-cftv" element={<SistemaCFTV />} />
+                <Route path="/auditoria" element={<Auditoria />} />
+                <Route path="/contato" element={<Contact />} />
+                <Route path="/canal-denuncias" element={<WhistleblowerChannel />} />
+                <Route path="/condicoes-uso" element={<CondicoesUso />} />
+                <Route path="/politica-cookies" element={<PoliticaCookies />} />
+                <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
+              </Route>
 
-          {/* Not Found */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+              {/* --- ROTA DE NOT FOUND --- */}
+              {/* Esta rota pega qualquer URL que não corresponda às anteriores */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -1,59 +1,54 @@
 services:
-  cga_db:
-    image: postgres:latest
-    container_name: cga_postgres_db
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+  # Serviço do Banco de Dados
+  arcoportus_db:
+    image: postgres:15-alpine
+    container_name: arcoportus_postgres_db
+    restart: always
+    env_file:
+      - ./.env # Carrega as variáveis do nosso arquivo .env
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432" # Usa a porta definida no .env
     volumes:
-      - cga_postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - arcoportus-data:/var/lib/postgresql/data
+    networks:
+      - arcoportus-net
 
-  backend:
+  # Serviço do Backend
+  arcoportus_backend:
+    container_name: arcoportus_backend_api
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: cga_backend_api
+      context: . # Constrói a imagem usando o Dockerfile na pasta atual (backend/)
+    restart: always
+    env_file:
+      - ./.env
     ports:
-      - "3333:3333"
-      - "5555:5555" # Prisma Studio
+      - "${BACKEND_PORT}:3334"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./src:/app/src # Monta o código-fonte para hot-reloading
     depends_on:
-      cga_db:
-        condition: service_healthy
-    # A mágica acontece aqui: construímos a DATABASE_URL para o container,
-    # usando as variáveis do banco e o nome do serviço 'cga_db' como host.
-    # Isso libera o .env para ser usado por comandos locais (como o seed).
-    environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@cga_db:5432/${DB_NAME}?schema=public"
-      JWT_SECRET: ${JWT_SECRET}
-    restart: unless-stopped
-    command: sh -c "npm install && npx prisma migrate deploy && npx prisma generate && npm run dev"
+      - arcoportus_db # Garante que o DB inicie antes do backend
+    networks:
+      - arcoportus-net
 
-  frontend:
-    image: node:20-alpine
-    container_name: cga_frontend
-    working_dir: /app
+  # Serviço do Frontend
+  arcoportus_frontend:
+    container_name: arcoportus_frontend_ui
+    build:
+      context: ../frontend # Constrói a imagem usando o Dockerfile na pasta frontend/
+    restart: always
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:5174"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules # Isola o node_modules para evitar conflitos
-    restart: unless-stopped
-    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+      - ../frontend/src:/app/src # Monta o código-fonte para hot-reloading
+    depends_on:
+      - arcoportus_backend
+    networks:
+      - arcoportus-net
 
-# --- DECLARAÇÃO DE VOLUMES ---
-# ESTE BLOCO É CRUCIAL E DEVE TER INDENTAÇÃO ZERO.
-# ELE PRECISA ESTAR NO MESMO NÍVEL DE 'services'.
 volumes:
-  cga_postgres_data:
+  arcoportus-data:
+    driver: local
+
+networks:
+  arcoportus-net:
+    driver: bridge

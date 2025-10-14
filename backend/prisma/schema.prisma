@@ -1,9 +1,12 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -11,82 +14,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Company {
+// Adicione este enum para categorizar os arquivos
+enum FileType {
+  DOCUMENT    // Para PDFs, Docs, etc.
+  SPREADSHEET // Para CSV, XLSX
+  CAMERA_DATA // Para arquivos específicos de câmeras
+  OTHER       // Categoria genérica
+}
+
+model File {
   id        String   @id @default(uuid())
-  name      String
+  name      String   // Nome original do arquivo: "relatorio_janeiro.xlsx"
+  path      String   @unique // Nome seguro salvo no disco: "a1b2c3d4-e5f6.xlsx"
+  size      Int      // Tamanho do arquivo em bytes
+  mimetype  String   // Tipo do arquivo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  type      FileType @default(OTHER) // Categoria do arquivo
+
+  // --- Campos de Auditoria e Contexto ---
+  uploadedById   String   // ID do usuário que fez o upload (vem do JWT)
+  uploadedByName String   // Nome do usuário que fez o upload (vem do JWT)
+
+  // --- A CHAVE DA MULTILOCAÇÃO ---
+  // Garante que todo arquivo pertence a uma empresa.
+  companyId String   @db.Uuid
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users    User[]
-  products Companyproduct[] // Serviços que esta empresa assinou
-
-  @@map("companies")
+  @@index([companyId]) // Adiciona um índice para otimizar buscas por empresa
+  @@map("files")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
+model Camera {
+  id          String  @id @default(uuid())
+  name        String  // Nome ou identificador da câmera, ex: "CAM-01-PATIO"
+  location    String? // Localização física, ex: "Pátio de Contêineres Leste"
+  ipAddress   String? @unique // Endereço IP, se aplicável
+  model       String? // Modelo da câmera, ex: "Intelbras VIP 3230"
+  isActive    Boolean @default(true)
+
+  // --- A CHAVE DA MULTILOCAÇÃO ---
+  // Garante que toda câmera pertence a uma empresa.
+  companyId String  @db.Uuid
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  products Userproduct[] // Acesso do usuário aos serviços
-
-  @@map("users")
-}
-
-model product {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  companies Companyproduct[]
-
-  @@map("products")
-}
-
-// Tabela Pivot: Quais serviços uma empresa assinou
-model Companyproduct {
-  id        String @id @default(uuid())
-  companyId String
-  productId String
-
-  // Aqui podemos adicionar as configurações de personalização
-  // settings  Json?
-
-  company Company @relation(fields: [companyId], references: [id])
-  product product @relation(fields: [productId], references: [id])
-
-  userAccess Userproduct[]
-
-  @@unique([companyId, productId])
-  @@map("company_products")
-}
-
-// Tabela Pivot: A qual serviço um usuário tem acesso
-model Userproduct {
-  id               String @id @default(uuid())
-  userId           String
-  companyproductId String
-
-  user           User           @relation(fields: [userId], references: [id])
-  companyproduct Companyproduct @relation(fields: [companyproductId], references: [id])
-
-  // Aqui podemos adicionar permissões mais granulares no futuro
-  // permissions Json?
-
-  @@unique([userId, companyproductId])
-  @@map("user_products")
-}
-
-enum Role {
-  SUPER_ADMIN
-  ADMIN
-  USER
+  @@index([companyId])
+  @@map("cameras")
 }

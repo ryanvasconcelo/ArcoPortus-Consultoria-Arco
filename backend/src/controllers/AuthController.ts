@@ -11,22 +11,20 @@ export class AuthController {
         }
 
         try {
-            // ✅ ADICIONE ESTE TRECHO AQUI ✅
-            const apiKeyToSend = process.env.INTERNAL_API_KEY;
-            console.log('--- Auth Request (Arco Portus) ---');
-            console.log(`[Portus] Chave ENVIADA: [${apiKeyToSend}]`);
-            console.log('---------------------------------');
-            // FIM DO TRECHO
+            const apiKey = process.env.INTERNAL_API_KEY;
 
-            // 1. Chamar o endpoint interno do CGA para validar as credenciais
+            // ✅ ESTE LOG É A PROVA FINAL
+            console.log('--- AuthController Tentativa de Envio (Arco Portus) ---');
+            console.log(`[Portus Controller] Valor da API Key a ser enviada: [${apiKey}]`);
+            console.log('----------------------------------------------------');
+
             const cgaApiResponse = await axios.post(
-                // Usamos a variável de ambiente para a URL
                 `${process.env.CGA_INTERNAL_API_URL}/api/internal/auth/portus-login`,
-                { email, password }, // Body da requisição
+                { email, password },
                 {
                     headers: {
-                        // Enviamos o API Key para nos autenticarmos com o CGA
-                        'x-internal-api-key': process.env.INTERNAL_API_KEY,
+                        // Usamos a variável 'apiKey' que acabamos de logar
+                        'x-internal-api-key': apiKey,
                     },
                 }
             );
@@ -71,6 +69,55 @@ export class AuthController {
             // Se for outro tipo de erro (ex: CGA fora do ar)
             console.error('Login error:', error);
             return res.status(500).json({ message: 'Could not connect to authentication service.' });
+        }
+    }
+
+    public async forceChangePassword(req: Request, res: Response): Promise<Response> {
+        const { userId } = req.user; // O ID do usuário vem do token JWT (graças ao ensureAuthenticated)
+        const { newPassword } = req.body;
+
+        try {
+            // ✅ Pede para o CGA fazer o trabalho sujo
+            await axios.patch(
+                `${process.env.CGA_INTERNAL_API_URL}/api/internal/users/force-password-change`,
+                { userId, newPassword },
+                { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
+            );
+
+            return res.status(204).send(); // 204 No Content = sucesso sem corpo de resposta
+        } catch (error) {
+            console.error("Erro ao forçar troca de senha:", error);
+            return res.status(500).json({ message: "Erro ao se comunicar com o serviço de autenticação." });
+        }
+    }
+
+    public async forgotPassword(req: Request, res: Response): Promise<Response> {
+        try {
+            await axios.post(
+                `${process.env.CGA_INTERNAL_API_URL}/api/internal/password/forgot`,
+                { email: req.body.email },
+                { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
+            );
+            return res.status(204).send();
+        } catch (error) {
+            // Retornamos 204 mesmo em caso de erro para não vazar informações
+            console.error('[PORTUS] Erro ao solicitar redefinição:', error);
+            return res.status(204).send();
+        }
+    }
+
+    public async resetPassword(req: Request, res: Response): Promise<Response> {
+        try {
+            await axios.post(
+                `${process.env.CGA_INTERNAL_API_URL}/api/internal/password/reset`,
+                { token: req.body.token, newPassword: req.body.newPassword },
+                { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
+            );
+            return res.status(204).send();
+        } catch (error: any) {
+            const status = error.response?.status || 500;
+            const message = error.response?.data?.message || 'Erro ao redefinir a senha.';
+            return res.status(status).json({ message });
         }
     }
 }
