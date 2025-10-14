@@ -1,6 +1,8 @@
 import ArcoPortusHeader from "@/components/Header";
 import ArcoPortusFooter from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
+import headerImg from "@/assets/BannerCGA04.png";
+import lgpdCert from "@/assets/selo-LGPD.png";
 
 const PoliticaPrivacidade = () => {
   return (
@@ -12,15 +14,13 @@ const PoliticaPrivacidade = () => {
         <div
           className="h-64 rounded-lg mb-8 flex items-center justify-center text-white relative"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')`,
+            backgroundImage: `url(${headerImg})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
           }}
         >
-          <div className="absolute inset-0 bg-black/50 rounded-lg"></div>
-          <div className="relative z-10 text-center">
-            <h1 className="text-4xl font-bold">Política de Privacidade</h1>
-          </div>
+          <div className="absolute inset-0 bg-black/30 rounded-lg"></div>
         </div>
 
         {/* Content */}
@@ -98,17 +98,12 @@ const PoliticaPrivacidade = () => {
             {/* LGPD Certification */}
             <div className="flex justify-center mt-8">
               <div className="w-32 h-32 bg-muted rounded-full flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-xs font-bold">LEI GERAL DE PROTEÇÃO DE DADOS</div>
-                  <div className="text-lg font-bold">LGPD</div>
-                  <div className="text-xs">Certificado</div>
-                  <div className="text-xs">■■■■■</div>
+                <div className="p-4">
+                  <div className="w-48 h-48 bg-muted rounded-full flex items-center justify-center">
+                    <img src={lgpdCert} alt="" />
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground mt-4">
-              Última atualização: 13/10/2023
             </div>
           </CardContent>
         </Card>

@@ -26,7 +26,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-full lg:w-80 space-y-4">
+    <aside className="w-full lg:w-80 space-y-4">
       <Card className="glass-card">
         <CardContent className="p-4 space-y-3">
           {menuItems.map((item) => {
@@ -50,13 +50,12 @@ const Sidebar = () => {
           <div className="pt-4 space-y-3">
             <div className="bg-muted p-4 rounded-lg">
               <Button
-                className="w-full bg-secondary text-white hover:bg-secondary/90"
+                className="w-full bg-secondary text-white hover:bg-secondary/90 flex-col h-auto py-3"
                 onClick={() => navigate("/dashboard")}
               >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Dashboards
-                <br />
-                Acessar
+                <BarChart3 className="h-4 w-4 mb-1" />
+                <span className="text-xs">Dashboards</span>
+                <span className="text-xs">Acessar</span>
               </Button>
             </div>
             <div
@@ -69,7 +68,7 @@ const Sidebar = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </aside>
   );
 };
 

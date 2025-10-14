@@ -20,7 +20,7 @@ export function PDFPreviewModal({ onClose, fileName, fileUrl }: PDFPreviewModalP
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        
+
         <CardContent className="flex-1 p-0 overflow-hidden">
           {fileUrl ? (
             <iframe

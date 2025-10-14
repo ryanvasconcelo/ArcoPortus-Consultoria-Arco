@@ -11,10 +11,8 @@ import {
   Phone,
   MapPin,
   Globe,
-  Facebook,
   Instagram,
   Linkedin,
-  Twitter,
   Clock,
   Send
 } from 'lucide-react';
@@ -81,7 +79,7 @@ const Contact = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
               Entre em Contato
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -212,24 +210,24 @@ const Contact = () => {
                     <Mail className="h-5 w-5 text-primary mt-1" />
                     <div>
                       <h3 className="font-semibold">Email</h3>
-                      <p className="text-muted-foreground">contato@consultoriaarco.com.br</p>
-                      <p className="text-muted-foreground">suporte@consultoriaarco.com.br</p>
+                      <p className="text-muted-foreground">administracao@consultoriaarco.com.br</p>
+                      <p className="text-muted-foreground">marco.trindade@consultoriaarco.com.br</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
                     <Phone className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <h3 className="font-semibold">Telefone</h3>
-                      <p className="text-muted-foreground">+55 (11) 9999-9999</p>
-                      <p className="text-muted-foreground">+55 (11) 8888-8888</p>
+                      <h3 className="font-semibold">WhatsApp</h3>
+                      <p className="text-muted-foreground">+55 (92) 99176-1245</p>
+                      <p className="text-muted-foreground">+55 (92) 99192-7666</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
                     <Globe className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <h3 className="font-semibold">Website</h3>
+                      <h3 className="font-semibold">Site</h3>
                       <p className="text-muted-foreground">www.consultoriaarco.com.br</p>
                     </div>
                   </div>
@@ -255,15 +253,12 @@ const Contact = () => {
                     <Button
                       variant="outline"
                       className="hover-lift flex items-center gap-2"
-                      onClick={() => window.open('#', '_blank')}
-                    >
-                      <Facebook className="h-4 w-4" />
-                      Facebook
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="hover-lift flex items-center gap-2"
-                      onClick={() => window.open('#', '_blank')}
+                      onClick={() =>
+                        window.open(
+                          'https://www.instagram.com/arcosecurity?igsh=MTJ1bmttYXl5anBpaw==&utm_source=ig_contact_invite',
+                          '_blank'
+                        )
+                      }
                     >
                       <Instagram className="h-4 w-4" />
                       Instagram
@@ -271,22 +266,20 @@ const Contact = () => {
                     <Button
                       variant="outline"
                       className="hover-lift flex items-center gap-2"
-                      onClick={() => window.open('#', '_blank')}
+                      onClick={() =>
+                        window.open(
+                          'https://www.linkedin.com/in/arco-consultoria-em-seguran%C3%A7a-01229b282?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app',
+                          '_blank'
+                        )
+                      }
                     >
                       <Linkedin className="h-4 w-4" />
                       LinkedIn
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="hover-lift flex items-center gap-2"
-                      onClick={() => window.open('#', '_blank')}
-                    >
-                      <Twitter className="h-4 w-4" />
-                      Twitter
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
             </div>
           </div>
         </div>
@@ -294,7 +287,7 @@ const Contact = () => {
       {/* Footer */}
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
         <div className="container mx-auto">
-          © 2023 Arco Consultoria em Segurança - Todos os direitos reservados.
+          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
         </div>
       </footer>
     </div>

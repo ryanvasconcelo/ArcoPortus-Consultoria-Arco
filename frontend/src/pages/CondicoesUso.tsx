@@ -1,6 +1,7 @@
 import ArcoPortusHeader from "@/components/Header";
 import ArcoPortusFooter from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
+import headerImg from "@/assets/BannerCGA04.png";
 
 const CondicoesUso = () => {
   return (
@@ -12,15 +13,13 @@ const CondicoesUso = () => {
         <div
           className="h-64 rounded-lg mb-8 flex items-center justify-center text-white relative"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')`,
+            backgroundImage: `url(${headerImg})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
           }}
         >
-          <div className="absolute inset-0 bg-black/50 rounded-lg"></div>
-          <div className="relative z-10 text-center">
-            <h1 className="text-4xl font-bold">Condições de Uso</h1>
-          </div>
+          <div className="absolute inset-0 bg-black/30 rounded-lg"></div>
         </div>
 
         {/* Content */}

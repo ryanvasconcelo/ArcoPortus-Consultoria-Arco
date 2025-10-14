@@ -26,7 +26,7 @@ const ArcoPortusFooter = () => {
 
         {/* Copyright */}
         <div className="border-t border-white/20 mt-8 pt-6 text-center text-sm text-white/80">
-          © 2023 Arco Consultoria em Segurança - Todos os direitos reservados
+          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
         </div>
       </div>
     </footer>

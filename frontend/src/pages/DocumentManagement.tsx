@@ -13,11 +13,11 @@ import {
   Eye
 } from "lucide-react";
 import ArcoPortusHeader from "@/components/Header";
-import ArcoPortusFooter from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploadModal } from "@/components/FileUploadModal";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
+import { EditDocumentModal } from "@/components/EditDocumentModal";
 
 interface Document {
   id: string;
@@ -51,6 +51,7 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
 
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [newDocument, setNewDocument] = useState({
     name: "",
@@ -87,6 +88,24 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
     });
   };
 
+  const handleEdit = (data: { name: string; description: string }) => {
+    if (!selectedDocument) return;
+
+    setDocuments(documents.map(doc =>
+      doc.id === selectedDocument.id
+        ? { ...doc, name: data.name, description: data.description }
+        : doc
+    ));
+
+    setShowEditModal(false);
+    setSelectedDocument(null);
+
+    toast({
+      title: "Documento atualizado",
+      description: "As informações foram salvas com sucesso."
+    });
+  };
+
   const handleDelete = (id: string) => {
     setDocuments(documents.filter(doc => doc.id !== id));
     toast({
@@ -107,11 +126,11 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
       <ArcoPortusHeader />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           <Sidebar />
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="bg-secondary text-white text-center py-4 rounded-t-lg mb-6">
               <h1 className="text-xl font-bold">{title}</h1>
@@ -146,8 +165,8 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
 
             {/* Documents Table */}
             <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
+              <CardHeader className="hidden md:block">
+                <div className="grid grid-cols-2 gap-4">
                   <h3 className="text-lg font-semibold">Descrição</h3>
                   <h3 className="text-lg font-semibold">Anexo</h3>
                 </div>
@@ -155,21 +174,23 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
               <CardContent>
                 <div className="space-y-4">
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="w-6 h-6 bg-secondary text-white rounded flex items-center justify-center text-xs">
+                    <div key={doc.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start space-x-3">
+                          <span className="w-8 h-8 bg-secondary text-white rounded-lg flex items-center justify-center text-base flex-shrink-0">
                             {doc.type === 'PDF' ? '📄' : '📋'}
                           </span>
-                          <div>
-                            <h4 className="font-medium">{doc.description}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {doc.name} • {doc.size} • {doc.uploadDate}
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-sm md:text-base truncate">{doc.description}</h4>
+                            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                              <span className="block md:inline truncate">{doc.name}</span>
+                              <span className="hidden md:inline"> • </span>
+                              <span className="block md:inline">{doc.size} • {doc.uploadDate}</span>
                             </p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -177,29 +198,40 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                             setSelectedDocument(doc);
                             setShowPreview(true);
                           }}
+                          className="flex-1 md:flex-initial"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Preview
+                          <Eye className="h-4 w-4 md:mr-1" />
+                          <span className="hidden md:inline">Preview</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDownload(doc)}
+                          className="flex-1 md:flex-initial"
                         >
-                          <Download className="h-4 w-4 mr-1" />
-                          Baixar
+                          <Download className="h-4 w-4 md:mr-1" />
+                          <span className="hidden md:inline">Baixar</span>
                         </Button>
-                        <Button size="sm" variant="outline">
-                          <Edit3 className="h-4 w-4 mr-1" />
-                          Editar
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedDocument(doc);
+                            setShowEditModal(true);
+                          }}
+                          className="flex-1 md:flex-initial"
+                        >
+                          <Edit3 className="h-4 w-4 md:mr-1" />
+                          <span className="hidden md:inline">Editar</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => handleDelete(doc.id)}
+                          className="flex-1 md:flex-initial"
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Excluir
+                          <Trash2 className="h-4 w-4 md:mr-1" />
+                          <span className="hidden md:inline">Excluir</span>
                         </Button>
                       </div>
                     </div>
@@ -211,7 +243,12 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
         </div>
       </main>
 
-      <ArcoPortusFooter />
+      {/* Footer */}
+      <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
+        <div className="container mx-auto">
+          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
+        </div>
+      </footer>
 
       {/* File Upload Modal */}
       {showUploadForm && (
@@ -248,6 +285,18 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
             setShowPreview(false);
             setSelectedDocument(null);
           }}
+        />
+      )}
+
+      {/* Edit Document Modal */}
+      {showEditModal && selectedDocument && (
+        <EditDocumentModal
+          document={selectedDocument}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedDocument(null);
+          }}
+          onSubmit={handleEdit}
         />
       )}
     </div>

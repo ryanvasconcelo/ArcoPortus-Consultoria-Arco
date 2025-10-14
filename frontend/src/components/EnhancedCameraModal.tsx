@@ -23,7 +23,8 @@ export function EnhancedCameraModal({ onClose, onSubmit, editData }: EnhancedCam
     fabricante: editData?.fabricante || "",
     modelo: editData?.modelo || "",
     possuiAnalitico: editData?.possuiAnalitico || "Não",
-    diasGravacao: editData?.diasGravacao || "30"
+    diasGravacao: editData?.diasGravacao || "30",
+    ip: editData?.ip || ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +48,7 @@ export function EnhancedCameraModal({ onClose, onSubmit, editData }: EnhancedCam
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,6 +185,17 @@ export function EnhancedCameraModal({ onClose, onSubmit, editData }: EnhancedCam
                   className="glass-input"
                   required
                   min="1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ip">Endereço IP</Label>
+                <Input
+                  id="ip"
+                  value={formData.ip}
+                  onChange={(e) => handleChange("ip", e.target.value)}
+                  placeholder="Ex: 192.168.1.100"
+                  className="glass-input"
                 />
               </div>
             </div>

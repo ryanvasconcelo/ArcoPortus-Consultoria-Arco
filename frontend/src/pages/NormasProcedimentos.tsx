@@ -14,7 +14,6 @@ import {
   FileText
 } from "lucide-react";
 import ArcoPortusHeader from "@/components/Header";
-import ArcoPortusFooter from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploadModal } from "@/components/FileUploadModal";
@@ -124,32 +123,32 @@ const NormasProcedimentos = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <ArcoPortusHeader />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex gap-6">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <Sidebar />
 
-          <div className="flex-1">
-            <div className="bg-secondary text-white text-center py-4 rounded-t-lg mb-6">
-              <h1 className="text-xl font-bold">NORMAS E PROCEDIMENTOS</h1>
+          <div className="flex-1 min-w-0">
+            <div className="bg-secondary text-white text-center py-3 sm:py-4 rounded-t-lg mb-4 sm:mb-6">
+              <h1 className="text-lg sm:text-xl font-bold px-4">NORMAS E PROCEDIMENTOS</h1>
             </div>
 
             {/* Search */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6 px-2 sm:px-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Buscar documentos..."
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
               </div>
             </div>
 
             {/* Document Structure with Collapsible Sections */}
-            <Card>
-              <CardHeader className="bg-gradient-to-r from-orange-500/10 to-orange-600/10 border-b">
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-orange-500/10 to-orange-600/10 border-b p-3 sm:p-6">
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Descrição</CardTitle>
-                  <CardTitle className="text-lg">Anexo</CardTitle>
+                  <CardTitle className="text-sm sm:text-lg">Descrição</CardTitle>
+                  <CardTitle className="text-sm sm:text-lg">Anexo</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -158,15 +157,15 @@ const NormasProcedimentos = () => {
                     <Collapsible key={category} open={openSections[category]}>
                       <CollapsibleTrigger
                         onClick={() => toggleSection(category)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors bg-orange-500/5"
+                        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-muted/50 transition-colors bg-orange-500/5"
                       >
                         <div className="flex items-center gap-2">
                           {openSections[category] ? (
-                            <ChevronDown className="h-4 w-4 text-orange-600" />
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 text-orange-600" />
+                            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
                           )}
-                          <span className="font-semibold text-orange-600">{category}</span>
+                          <span className="font-semibold text-orange-600 text-xs sm:text-sm break-words">{category}</span>
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -176,15 +175,15 @@ const NormasProcedimentos = () => {
                               <Collapsible open={openSections[subcategory]}>
                                 <CollapsibleTrigger
                                   onClick={() => toggleSection(subcategory)}
-                                  className="w-full flex items-center justify-between p-3 pl-8 hover:bg-muted/30 transition-colors bg-muted/20"
+                                  className="w-full flex items-center justify-between p-2 sm:p-3 pl-4 sm:pl-8 hover:bg-muted/30 transition-colors bg-muted/20"
                                 >
                                   <div className="flex items-center gap-2">
                                     {openSections[subcategory] ? (
-                                      <ChevronDown className="h-3 w-3" />
+                                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
                                     ) : (
-                                      <ChevronRight className="h-3 w-3" />
+                                      <ChevronRight className="h-3 w-3 flex-shrink-0" />
                                     )}
-                                    <span className="font-medium text-sm">{subcategory}</span>
+                                    <span className="font-medium text-xs sm:text-sm break-words">{subcategory}</span>
                                   </div>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>
@@ -193,27 +192,27 @@ const NormasProcedimentos = () => {
                                     return (
                                       <div
                                         key={item}
-                                        className="flex items-center justify-between p-3 pl-16 hover:bg-muted/20 transition-colors border-l-2 border-transparent hover:border-primary"
+                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 sm:p-3 pl-6 sm:pl-16 hover:bg-muted/20 transition-colors border-l-2 border-transparent hover:border-primary"
                                       >
-                                        <span className="text-sm">{item}</span>
-                                        <div className="flex items-center gap-2">
+                                        <span className="text-xs sm:text-sm break-words pr-2">{item}</span>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
                                           {doc ? (
                                             <>
                                               <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 onClick={() => handleDownload(doc)}
-                                                className="h-8"
+                                                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                               >
-                                                <Download className="h-4 w-4 text-blue-600" />
+                                                <Download className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                               </Button>
                                               <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 onClick={() => handleDelete(doc.id)}
-                                                className="h-8"
+                                                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                               >
-                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                                               </Button>
                                             </>
                                           ) : (
@@ -224,9 +223,9 @@ const NormasProcedimentos = () => {
                                                 setSelectedItem(item);
                                                 setShowUploadForm(true);
                                               }}
-                                              className="h-8"
+                                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                             >
-                                              <Upload className="h-4 w-4 text-green-600" />
+                                              <Upload className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                                             </Button>
                                           )}
                                         </div>
@@ -241,27 +240,27 @@ const NormasProcedimentos = () => {
                               return (
                                 <div
                                   key={item}
-                                  className="flex items-center justify-between p-3 pl-12 hover:bg-muted/20 transition-colors border-l-2 border-transparent hover:border-primary"
+                                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 sm:p-3 pl-6 sm:pl-12 hover:bg-muted/20 transition-colors border-l-2 border-transparent hover:border-primary"
                                 >
-                                  <span className="text-sm">{item}</span>
-                                  <div className="flex items-center gap-2">
+                                  <span className="text-xs sm:text-sm break-words pr-2">{item}</span>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
                                     {doc ? (
                                       <>
                                         <Button
                                           size="sm"
                                           variant="ghost"
                                           onClick={() => handleDownload(doc)}
-                                          className="h-8"
+                                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                         >
-                                          <Download className="h-4 w-4 text-blue-600" />
+                                          <Download className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                         </Button>
                                         <Button
                                           size="sm"
                                           variant="ghost"
                                           onClick={() => handleDelete(doc.id)}
-                                          className="h-8"
+                                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                         >
-                                          <Trash2 className="h-4 w-4 text-red-600" />
+                                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                                         </Button>
                                       </>
                                     ) : (
@@ -272,9 +271,9 @@ const NormasProcedimentos = () => {
                                           setSelectedItem(item);
                                           setShowUploadForm(true);
                                         }}
-                                        className="h-8"
+                                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                       >
-                                        <Upload className="h-4 w-4 text-green-600" />
+                                        <Upload className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                                       </Button>
                                     )}
                                   </div>
@@ -293,7 +292,12 @@ const NormasProcedimentos = () => {
         </div>
       </main>
 
-      <ArcoPortusFooter />
+      {/* Footer */}
+      <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
+        <div className="container mx-auto">
+          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
+        </div>
+      </footer>
 
       {showUploadForm && (
         <FileUploadModal

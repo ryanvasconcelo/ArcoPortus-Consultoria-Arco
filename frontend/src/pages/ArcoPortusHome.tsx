@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react"; // Removida a importação duplicada e o 'Target' não utilizado
 import ArcoPortusHeader from "@/components/Header";
-import ArcoPortusFooter from "@/components/Footer";
 import HeroCarousel from "@/components/HeroCarousel";
 import Dashboards from "@/assets/icons/dashboards.png";
 import aresp from "@/assets/icons/aresp.png";
@@ -14,6 +13,7 @@ import ocorrencias from "@/assets/icons/treinamento.png";
 import legislacao from "@/assets/icons/legislacao.png";
 import cftv from "@/assets/icons/cftv.png";
 import rotinas from "@/assets/icons/rotinas.png";
+import ArcoPortusFooter from "@/components/Footer";
 
 const ArcoPortusHome = () => {
   const solutions = [

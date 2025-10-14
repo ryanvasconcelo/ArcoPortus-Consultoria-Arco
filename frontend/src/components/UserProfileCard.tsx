@@ -27,10 +27,10 @@ const roleLabels = {
   USER: "Usuário"
 };
 
-const roleColors = {
-  SUPER_ADMIN: "bg-gradient-to-r from-purple-500 to-pink-500",
-  ADMIN: "bg-gradient-to-r from-blue-500 to-cyan-500",
-  USER: "bg-gradient-to-r from-green-500 to-emerald-500"
+const roleColors: { [key: string]: string } = {
+  SUPER_ADMIN: "bg-[hsl(var(--role-super-admin))]",
+  ADMIN: "bg-[hsl(var(--role-admin))]",
+  USER: "bg-[hsl(var(--role-user))]"
 };
 
 export function UserProfileCard({ user, onLogout }: UserProfileCardProps) {

@@ -117,7 +117,7 @@ const WhistleblowerChannel = () => {
       {/* Footer */}
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
         <div className="container mx-auto">
-          © 2023 Arco Consultoria em Segurança - Todos os direitos reservados.
+          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
         </div>
       </footer>
     </div>
