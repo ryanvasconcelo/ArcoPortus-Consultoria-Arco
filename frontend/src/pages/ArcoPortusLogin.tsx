@@ -31,7 +31,7 @@ const ArcoPortusLogin = () => {
 
     try {
       await signIn({ email, password });
-      navigate("/dashboard");
+      navigate("/");
     } catch (error) {
       console.error("Falha no login:", error);
       toast({

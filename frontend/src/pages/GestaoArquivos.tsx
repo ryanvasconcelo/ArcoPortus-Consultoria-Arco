@@ -6,7 +6,6 @@ import {
   FileText,
   Camera,
   ClipboardCheck,
-  BarChart3,
   GraduationCap
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -16,10 +15,11 @@ const GestaoArquivos = () => {
 
   const services = [
     {
-      path: "/aresp",
+      path: "https://app.accia.com.br/site/login",
       label: "ARESP",
       icon: ClipboardCheck,
-      color: "from-blue-500/20 to-blue-600/20"
+      color: "from-blue-500/20 to-blue-600/20",
+      external: true
     },
     {
       path: "/diagnostico-ear",
@@ -40,16 +40,24 @@ const GestaoArquivos = () => {
       color: "from-orange-500/20 to-orange-600/20"
     },
     {
-      path: "/gestao-rotinas",
-      label: "GESTÃO DE ROTINAS OPERACIONAIS",
+      path: "https://app.accia.com.br/site/login",
+      label: "GESTÃO DE OCORRÊNCIAS",
       icon: FileText,
-      color: "from-pink-500/20 to-pink-600/20"
+      color: "from-yellow-500/20 to-yellow-600/20",
+      external: true
     },
     {
       path: "/legislacao",
       label: "LEGISLAÇÃO",
       icon: FileText,
       color: "from-indigo-500/20 to-indigo-600/20"
+    },
+    {
+      path: "https://v2.findme.id/login",
+      label: "GESTÃO DE ROTINAS OPERACIONAIS",
+      icon: FileText,
+      color: "from-pink-500/20 to-pink-600/20",
+      external: true
     },
     {
       path: "/sistema-cftv",
@@ -78,9 +86,13 @@ const GestaoArquivos = () => {
                 const Icon = service.icon;
                 return (
                   <Card
-                    key={service.path}
+                    key={service.label}
                     className={`cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-xl bg-gradient-to-br ${service.color} border-2 border-border/50`}
-                    onClick={() => navigate(service.path)}
+                    onClick={() =>
+                      service.external
+                        ? window.open(service.path, "_blank")
+                        : navigate(service.path)
+                    }
                   >
                     <CardContent className="p-8 text-center">
                       <div className="mb-4 flex justify-center">
@@ -98,25 +110,10 @@ const GestaoArquivos = () => {
               })}
 
               <Card
-                className="cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-2 border-border/50"
-                onClick={() => navigate("/dashboard")}
-              >
-                <CardContent className="p-8 text-center">
-                  <div className="mb-4 flex justify-center">
-                    <div className="p-4 bg-secondary/10 rounded-full">
-                      <BarChart3 className="h-10 w-10 text-secondary" />
-                    </div>
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">DASHBOARDS</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Visualize métricas e relatórios
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
                 className="cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 border-2 border-border/50"
-                onClick={() => window.open("https://unicasp.edu.br", "_blank")}
+                onClick={() =>
+                  window.open("https://unicasp.woli.com.br/pt-BR/Login/Index?returnUrl=%2F", "_blank")
+                }
               >
                 <CardContent className="p-8 text-center">
                   <div className="mb-4 flex justify-center">
@@ -137,7 +134,7 @@ const GestaoArquivos = () => {
 
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
         <div className="container mx-auto">
-          © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
+          © 2025_V02 Arco Security I Academy I Solutions - Todos os direitos reservados.
         </div>
       </footer>
     </div>

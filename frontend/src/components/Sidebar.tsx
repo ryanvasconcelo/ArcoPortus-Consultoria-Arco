@@ -15,12 +15,13 @@ const Sidebar = () => {
   const location = useLocation();
 
   const menuItems = [
-    { path: "/aresp", label: "ARESP", icon: ClipboardCheck },
+    { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true },
     { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText },
     { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText },
     { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText },
-    { path: "/gestao-rotinas", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText },
+    { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true },
     { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText },
+    { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true },
     { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera },
     { path: "/auditoria", label: "AUDITORIA", icon: Shield },
   ];
@@ -35,11 +36,14 @@ const Sidebar = () => {
 
             return (
               <Button
-                key={item.path}
-                onClick={() => navigate(item.path)}
+                key={item.label}
+                onClick={() =>
+                  item.external
+                    ? window.open(item.path, "_blank")
+                    : navigate(item.path)
+                }
                 variant={isActive ? "default" : "outline"}
-                className={`w-full justify-start text-sm ${isActive ? "btn-primary" : ""
-                  }`}
+                className={`w-full justify-start text-sm ${isActive ? "btn-primary" : ""}`}
               >
                 <Icon className="h-4 w-4 mr-2 flex-shrink-0" />
                 <span className="truncate">{item.label}</span>
@@ -60,7 +64,7 @@ const Sidebar = () => {
             </div>
             <div
               className="bg-muted p-4 rounded-lg text-center cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => window.open("https://unicasp.edu.br", "_blank")}
+              onClick={() => window.open("https://unicasp.woli.com.br/pt-BR/Login/Index?returnUrl=%2F", "_blank")}
             >
               <GraduationCap className="h-6 w-6 mx-auto mb-1" />
               <div className="text-sm font-medium">TREINAMENTOS</div>
