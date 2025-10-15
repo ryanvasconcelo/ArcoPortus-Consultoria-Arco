@@ -36,7 +36,7 @@ import cors from 'cors';
 import { authRoutes } from './routes/auth.routes';
 
 const app = express();
-const PORT = process.env.PORT || 3334;
+const PORT = process.env.PORT || 3335;
 
 app.use(cors());
 app.use(express.json());

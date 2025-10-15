@@ -22,7 +22,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "${BACKEND_PORT}:3334"
+      - "${BACKEND_PORT}:3335"
     volumes:
       - ./src:/app/src # Monta o código-fonte para hot-reloading
     depends_on:

@@ -11,15 +11,15 @@ export class AuthController {
         }
 
         try {
+
             const apiKey = process.env.INTERNAL_API_KEY;
 
-            // ✅ ESTE LOG É A PROVA FINAL
-            console.log('--- AuthController Tentativa de Envio (Arco Portus) ---');
-            console.log(`[Portus Controller] Valor da API Key a ser enviada: [${apiKey}]`);
-            console.log('----------------------------------------------------');
+            console.log('🔍 [DEBUG] CGA URL:', process.env.CGA_INTERNAL_API_URL);
+            console.log('🔍 [DEBUG] API Key:', apiKey?.substring(0, 20) + '...');
+            console.log('🔍 [DEBUG] Full URL:', `${process.env.CGA_INTERNAL_API_URL}/internal/auth/portus-login`);
 
             const cgaApiResponse = await axios.post(
-                `${process.env.CGA_INTERNAL_API_URL}/api/internal/auth/portus-login`,
+                `${process.env.CGA_INTERNAL_API_URL}/internal/auth/portus-login`,
                 { email, password },
                 {
                     headers: {
@@ -79,7 +79,7 @@ export class AuthController {
         try {
             // ✅ Pede para o CGA fazer o trabalho sujo
             await axios.patch(
-                `${process.env.CGA_INTERNAL_API_URL}/api/internal/users/force-password-change`,
+                `${process.env.CGA_INTERNAL_API_URL}/internal/users/force-password-change`,
                 { userId, newPassword },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
@@ -94,7 +94,7 @@ export class AuthController {
     public async forgotPassword(req: Request, res: Response): Promise<Response> {
         try {
             await axios.post(
-                `${process.env.CGA_INTERNAL_API_URL}/api/internal/password/forgot`,
+                `${process.env.CGA_INTERNAL_API_URL}/internal/password/forgot`,
                 { email: req.body.email },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
@@ -109,7 +109,7 @@ export class AuthController {
     public async resetPassword(req: Request, res: Response): Promise<Response> {
         try {
             await axios.post(
-                `${process.env.CGA_INTERNAL_API_URL}/api/internal/password/reset`,
+                `${process.env.CGA_INTERNAL_API_URL}/internal/password/reset`,
                 { token: req.body.token, newPassword: req.body.newPassword },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
