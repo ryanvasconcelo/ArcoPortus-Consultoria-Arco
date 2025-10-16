@@ -1,51 +1,46 @@
 // src/services/fileService.ts
-import api from './api'; // Seu cliente Axios configurado (com JWT)
+import api from './api'; // Assumindo que 'api' é sua instância do Axios já configurada com interceptors para o token
 
-export interface FileData {
+// 1. A interface que representa EXATAMENTE o que nossa API retorna
+export interface Document {
     id: string;
-    name: string; // Nome original
+    name: string;
     description: string;
-    size: number; // Em bytes (vamos converter para string no Front)
-    mimeType: string;
-    uploadDate: string; // Ou createdAt
-    userId: string;
+    path: string;
+    size: number; // A API retorna como número, vamos formatar no componente
+    mimetype: string;
+    type: 'DOCUMENT' | 'SPREADSHEET' | 'CAMERA_DATA' | 'OTHER';
+    uploadedById: string;
+    uploadedByName: string | null;
     companyId: string;
-    // Opcional: para Normas e Procedimentos
-    item?: string;
-    category?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
+// Objeto com as funções do serviço
 export const fileService = {
-    // 1. Listar Arquivos
-    async listFiles(category: string): Promise<FileData[]> {
-        // No momento, o backend lista TUDO por companyId.
-        // Se quisermos filtrar por categoria (como 'legislacao', 'diagnostico-ear'),
-        // precisaremos adaptar a rota GET /api/files para aceitar um `category` como query param.
-        // Por agora, vamos buscar tudo e filtrar no front (ou assumir que o backend foi ajustado).
+    // --- Funções que JÁ FUNCIONAM com nosso backend atual ---
 
-        // ASSUMINDO AJUSTE NO BACKEND: GET /api/files?category=...
-        const response = await api.get<FileData[]>(`/api/files`, {
-            params: { category }
-        });
-        return response.data.map(file => ({
-            ...file,
-            uploadDate: new Date(file.uploadDate).toLocaleDateString('pt-BR'), // Formata a data
-            size: file.size, // Manter em bytes, formatar no componente
-        }));
+    /**
+     * Busca todos os arquivos da empresa do usuário logado.
+     */
+    async listFiles(): Promise<Document[]> {
+        // Agora isso funciona, pois api.get() vai juntar 'http://localhost:3335' + '/api/files'
+        const response = await api.get<Document[]>('/api/files');
+        return response.data;
     },
 
-    // 2. Upload de Arquivo
-    async uploadFile(file: File, name: string, description: string, category: string, item?: string): Promise<FileData> {
+    /**
+     * Faz o upload de um novo arquivo.
+     */
+    async uploadFile(data: { file: File; description: string; name: string }): Promise<Document> {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('name', name); // Pode ser usado para dar um nome mais amigável
-        formData.append('description', description);
-        formData.append('category', category);
-        if (item) {
-            formData.append('item', item);
-        }
+        formData.append('file', data.file);
+        formData.append('description', data.description);
+        formData.append('name', data.name);
 
-        const response = await api.post<FileData>(`/api/files/upload`, formData, {
+        // CORREÇÃO: A rota correta é POST /api/files, não /api/files/upload
+        const response = await api.post<Document>('/api/files', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -53,25 +48,34 @@ export const fileService = {
         return response.data;
     },
 
-    // 3. Deletar Arquivo
+    // --- Funções Futuras (Vamos implementar os endpoints depois) ---
+
+    /**
+     * Deleta um arquivo pelo seu ID. (A SER IMPLEMENTADO NO BACKEND)
+     */
     async deleteFile(id: string): Promise<void> {
+        // A rota é DELETE /api/files/:id
         await api.delete(`/api/files/${id}`);
     },
 
-    // 4. Download (URL direta)
-    getDownloadUrl(id: string): string {
-        // Constrói a URL de download que o botão deve usar
-        return `${api.defaults.baseURL}/api/files/${id}/download`;
+    /**
+     * Atualiza os metadados (nome, descrição) de um arquivo. (A SER IMPLEMENTADO NO BACKEND)
+     */
+    async updateFile(id: string, data: { name: string; description: string }): Promise<Document> {
+        const response = await api.patch<Document>(`/api/files/${id}`, data);
+        return response.data;
     },
 
-    // 5. Atualizar Metadados
-    async updateFile(id: string, name: string, description: string): Promise<FileData> {
-        const response = await api.patch<FileData>(`/api/files/${id}`, { name, description });
-        return response.data;
-    }
+    /**
+     * Retorna a URL completa para download de um arquivo. (A SER IMPLEMENTADO NO BACKEND)
+     */
+    getDownloadUrl(path: string): string {
+        // CORREÇÃO: O download deve usar a URL base da API e o 'path' do arquivo.
+        return `${import.meta.env.VITE_API_URL}/uploads/${path}`; // Exemplo, ajuste conforme sua variável de ambiente
+    },
 };
 
-// Função auxiliar para formatação de tamanho
+// Função auxiliar para formatação de tamanho (perfeita, mantemos!)
 export const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
