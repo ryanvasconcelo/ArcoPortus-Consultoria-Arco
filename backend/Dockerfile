@@ -1,49 +1,52 @@
-# Estágio 1: Builder
+# Dockerfile Final e Definitivo
+
+# ==========================================================
+# Estágio 1: 'builder' - Responsável por criar os artefatos
+# ==========================================================
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copiar arquivos de dependências
+# Copia os arquivos de dependência
 COPY package*.json ./
 
-# Copiar schema do Prisma PRIMEIRO
-COPY prisma ./prisma/
-
-# Instalar dependências (incluindo dev dependencies para build)
+# Instala TODAS as dependências (dev e prod)
 RUN npm install
 
-# Gerar Prisma Client ANTES de copiar o código
-RUN npx prisma generate
-
-# Copiar código fonte DEPOIS de gerar o Prisma
+# Copia todo o resto do código fonte
 COPY . .
 
-# Build do TypeScript
+# Compila o TypeScript para JavaScript, criando a pasta /dist
+# Isso acontece UMA VEZ, durante o 'docker build'
 RUN npm run build
 
-# Estágio 2: Produção
+# ==========================================================
+# Estágio 2: 'production' - A imagem final e otimizada
+# ==========================================================
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar package.json
+# Copia os arquivos de dependência e o schema
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Copiar o arquivo .env (IMPORTANTE!)
-COPY .env ./
-
-# Instalar apenas dependências de produção
+# Instala APENAS as dependências de produção
 RUN npm ci --only=production
 
-# Gerar Prisma Client novamente no ambiente de produção
-RUN npx prisma generate
+# Copia os artefatos que criamos no estágio anterior
+COPY --from=builder /app/dist ./dist                 # Nosso código compilado
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma # O cliente Prisma gerado
 
-# Copiar código compilado do estágio anterior
-COPY --from=builder /app/dist ./dist
+# Copia e prepara nosso script de inicialização
+COPY docker-entrypoint.sh .
+RUN chmod +x /app/docker-entrypoint.sh
 
-# Expor porta
-EXPOSE 3000
+# Expõe a porta
+EXPOSE 3335
 
-# Comando para iniciar
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Define o script que SEMPRE roda primeiro
+ENTRYPOINT [ "/app/docker-entrypoint.sh" ]
+
+# O comando final: executar o código já compilado
+CMD ["node", "dist/server.js"]

@@ -22,7 +22,17 @@ export default {
     },
     // Tipagem Correta para fileFilter:
     fileFilter: (req: Request, file: Express.Multer.File, callback: FileFilterCallback) => {
-        if (file.mimetype.match(/\/(pdf|doc|docx|jpeg|jpg|png)$/)) {
+        const allowedMimes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'image/jpeg',
+            'image/png',
+        ];
+
+        if (allowedMimes.includes(file.mimetype)) {
             callback(null, true);
         } else {
             // Se usar FileFilterCallback, o primeiro argumento deve ser Error ou null

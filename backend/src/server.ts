@@ -2,6 +2,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 // ... outros imports
 import { testRoutes } from './routes/test.routes';
+import { fileRoutes } from './routes/file.routes';
 
 
 // --- INÍCIO DO DIAGNÓSTICO DOTENV ---
@@ -47,6 +48,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+
+app.use('/api/files', fileRoutes);
 
 app.listen(PORT, () => {
     console.log(`🚀 Arco Portus server is running on http://localhost:${PORT}`);

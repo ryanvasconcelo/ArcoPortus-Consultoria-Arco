@@ -14,19 +14,23 @@ services:
       - arcoportus-net
 
   # Serviço do Backend
+  # Serviço do Backend (Modo Desenvolvimento)
   arcoportus_backend:
     container_name: arcoportus_backend_api
-    build:
-      context: . # Constrói a imagem usando o Dockerfile na pasta atual (backend/)
+    # NÃO USA o Dockerfile complexo, usa uma imagem base e um comando direto
+    image: node:18-alpine 
+    working_dir: /app
+    command: sh -c "npm install && npx prisma migrate deploy && npm run dev"
     restart: always
     env_file:
       - ./.env
     ports:
       - "${BACKEND_PORT}:3335"
     volumes:
-      - ./src:/app/src # Monta o código-fonte para hot-reloading
+      - .:/app                  # Mapeia TUDO (código, package.json, etc.)
+      - /app/node_modules       # Isola o node_modules
     depends_on:
-      - arcoportus_db # Garante que o DB inicie antes do backend
+      - arcoportus_db 
     networks:
       - arcoportus-net
 

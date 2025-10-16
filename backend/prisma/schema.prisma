@@ -6,7 +6,8 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  // Quando 'output' é omitido, o padrão é 'node_modules/.prisma/client'
+  // que é o local seguro e correto.
 }
 
 datasource db {
@@ -23,16 +24,18 @@ enum FileType {
 }
 
 model File {
-  id        String   @id @default(uuid())
-  name      String   // Nome original do arquivo: "relatorio_janeiro.xlsx"
-  path      String   @unique // Nome seguro salvo no disco: "a1b2c3d4-e5f6.xlsx"
-  size      Int      // Tamanho do arquivo em bytes
-  mimetype  String   // Tipo do arquivo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  type      FileType @default(OTHER) // Categoria do arquivo
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  category    String   // <-- NOSSA NOVA ETIQUETA
+  path        String   @unique
+  size        Int
+  mimetype    String
+  type        FileType @default(OTHER)
 
   // --- Campos de Auditoria e Contexto ---
   uploadedById   String   // ID do usuário que fez o upload (vem do JWT)
-  uploadedByName String   // Nome do usuário que fez o upload (vem do JWT)
+  uploadedByName String?   // Nome do usuário que fez o upload (vem do JWT)
 
   // --- A CHAVE DA MULTILOCAÇÃO ---
   // Garante que todo arquivo pertence a uma empresa.
