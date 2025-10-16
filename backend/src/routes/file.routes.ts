@@ -37,4 +37,10 @@ fileRoutes.delete(
     fileController.deleteFile
 );
 
+fileRoutes.get(
+    '/serve/:path',
+    ensureAuthenticated,
+    fileController.serveFile // Usaremos um novo método no controller
+);
+
 export { fileRoutes };

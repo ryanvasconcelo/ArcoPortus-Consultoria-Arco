@@ -29,65 +29,15 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
   const [showPreview, setShowPreview] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // 1. A função de upload que chama a API (está perfeita!)
-  const handleUploadSubmit = async (fileData: { file: File; name: string; description: string }) => {
-    try {
-      const newDocument = await fileService.uploadFile(fileData);
-      setDocuments(prevDocuments => [newDocument, ...prevDocuments]);
-      setShowUploadForm(false);
-      toast({
-        title: "Sucesso!",
-        description: "Seu documento foi enviado e salvo.",
-      });
-    } catch (error) {
-      console.error("Erro no upload:", error);
-      toast({
-        title: "Falha no Upload",
-        description: "Não foi possível salvar o documento. Tente novamente.",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  // 2. A função de edição (ainda usando lógica local, o que está correto por enquanto)
-  const handleEdit = async (data: { name: string; description: string }) => {
-    if (!selectedDocument) return;
-
-    try {
-      // Chama a API para salvar as alterações
-      const updatedDocument = await fileService.updateFile(selectedDocument.id, data);
-
-      // Atualiza a lista na tela com os novos dados, sem precisar recarregar
-      setDocuments(documents.map(doc =>
-        doc.id === selectedDocument.id ? updatedDocument : doc
-      ));
-
-      setShowEditModal(false);
-      setSelectedDocument(null);
-
-      toast({
-        title: "Documento atualizado",
-        description: "As informações foram salvas com sucesso."
-      });
-
-    } catch (error) {
-      console.error("Falha ao editar o documento:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar as alterações.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // 3. A função para buscar os dados da API (está perfeita!)
+  // --- LÓGICA DE DADOS (JÁ ESTÁ PERFEITA!) ---
   useEffect(() => {
     const fetchDocuments = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        const fetchedDocs = await fileService.listFiles();
+        const fetchedDocs = await fileService.listFiles(category);
         setDocuments(fetchedDocs);
       } catch (error) {
         console.error("Falha ao buscar documentos:", error);
@@ -101,51 +51,80 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
       }
     };
     fetchDocuments();
-  }, []);
+  }, [category]);
 
-  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const handleUploadSubmit = async (fileData: { file: File; name: string; description: string }) => {
+    try {
+      const newDocument = await fileService.uploadFile({ ...fileData, category });
+      setDocuments(prevDocuments => [newDocument, ...prevDocuments]);
+      setShowUploadForm(false);
+      toast({ title: "Sucesso!", description: "Seu documento foi enviado e salvo." });
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      toast({ title: "Falha no Upload", description: "Não foi possível salvar o documento.", variant: "destructive" });
+      throw error;
+    }
+  };
+
+  const handleEdit = async (data: { name: string; description: string }) => {
+    if (!selectedDocument) return;
+    try {
+      const updatedDocument = await fileService.updateFile(selectedDocument.id, data);
+      setDocuments(documents.map(doc => (doc.id === selectedDocument.id ? updatedDocument : doc)));
+      setShowEditModal(false);
+      setSelectedDocument(null);
+      toast({ title: "Documento atualizado", description: "As informações foram salvas com sucesso." });
+    } catch (error) {
+      console.error("Falha ao editar o documento:", error);
+      toast({ title: "Erro", description: "Não foi possível salvar as alterações.", variant: "destructive" });
+    }
+  };
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true);
     const originalDocuments = [...documents];
     setDocuments(documents.filter(doc => doc.id !== id));
-
     try {
       await fileService.deleteFile(id);
-      toast({
-        title: "Documento removido",
-        description: "O arquivo foi excluído com sucesso."
-      });
+      toast({ title: "Documento removido", description: "O arquivo foi excluído com sucesso." });
     } catch (error) {
       console.error("Falha ao excluir o documento:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o arquivo.",
-        variant: "destructive"
-      });
+      toast({ title: "Erro", description: "Não foi possível excluir o arquivo.", variant: "destructive" });
       setDocuments(originalDocuments);
     } finally {
       setIsDeleting(false);
-      setDocumentToDelete(null); // Fecha o modal
+      setDocumentToDelete(null);
     }
   };
 
-  const handleDownload = (doc: Document) => {
-    toast({
-      title: "Download iniciado",
-      description: `Baixando ${doc.name}...`
-    });
+  const handleDownload = async (doc: Document) => {
+    try {
+      toast({ title: "Preparando download...", description: `Baixando ${doc.name}` });
+
+      // 1. Pede ao nosso serviço para buscar o arquivo de forma segura
+      const fileBlob = await fileService.downloadFile(doc.path);
+
+      // 2. Cria uma URL temporária para o arquivo que está na memória
+      const url = window.URL.createObjectURL(fileBlob);
+
+      // 3. Cria um link invisível, clica nele e depois o remove
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.name); // Usa o nome original do arquivo
+      document.body.appendChild(link);
+      link.click();
+
+      // Limpa a URL da memória
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Falha no download:", error);
+      toast({ title: "Erro", description: "Não foi possível baixar o arquivo.", variant: "destructive" });
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p>Carregando documentos...</p>
-      </div>
-    );
-  }
-
+  // --- ESTRUTURA JSX (AGORA CORRIGIDA) ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <ArcoPortusHeader />
@@ -153,6 +132,7 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
         <div className="flex flex-col lg:flex-row gap-6">
           <Sidebar />
           <div className="flex-1 min-w-0">
+            {/* ... Seu conteúdo de Card, Input, Tabela, etc. ... */}
             <div className="bg-secondary text-white text-center py-4 rounded-t-lg mb-6">
               <h1 className="text-xl font-bold">{title}</h1>
             </div>
@@ -187,7 +167,6 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start space-x-3">
                           <span className="w-8 h-8 bg-secondary text-white rounded-lg flex items-center justify-center text-base flex-shrink-0">
-                            {/* Ajuste simples para o tipo vindo da API */}
                             {doc.mimetype.includes('pdf') ? '📄' : '📋'}
                           </span>
                           <div className="min-w-0 flex-1">
@@ -195,7 +174,6 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                             <p className="text-xs md:text-sm text-muted-foreground mt-1">
                               <span className="block md:inline truncate">{doc.name}</span>
                               <span className="hidden md:inline"> • </span>
-                              {/* 5. CORREÇÃO FINAL: Usando os dados corretos da API */}
                               <span className="block md:inline">
                                 {formatFileSize(doc.size)} • {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
                               </span>
@@ -204,10 +182,18 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedDocument(doc); setShowPreview(true); }} className="flex-1 md:flex-initial">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          // CORREÇÃO: Remova a chamada para handlePreview(doc) daqui.
+                          // Apenas abra o modal, como você já estava fazendo.
+                          onClick={() => { setSelectedDocument(doc); setShowPreview(true); }}
+                          className="flex-1 md:flex-initial"
+                        >
                           <Eye className="h-4 w-4 md:mr-1" />
                           <span className="hidden md:inline">Preview</span>
                         </Button>
+
                         <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="flex-1 md:flex-initial">
                           <Download className="h-4 w-4 md:mr-1" />
                           <span className="hidden md:inline">Baixar</span>
@@ -216,13 +202,7 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                           <Edit3 className="h-4 w-4 md:mr-1" />
                           <span className="hidden md:inline">Editar</span>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          // Em vez de chamar handleDelete, agora ele abre o modal
-                          onClick={() => setDocumentToDelete(doc)}
-                          className="flex-1 md:flex-initial"
-                        >
+                        <Button size="sm" variant="destructive" onClick={() => setDocumentToDelete(doc)} className="flex-1 md:flex-initial">
                           <Trash2 className="h-4 w-4 md:mr-1" />
                           <span className="hidden md:inline">Excluir</span>
                         </Button>
@@ -234,34 +214,45 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
             </Card>
           </div>
         </div>
-      </main>
+      </main >
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
         <div className="container mx-auto">
           © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
         </div>
       </footer>
-      {showUploadForm && (
-        <FileUploadModal
-          title={`Novo Documento - ${title}`}
-          onClose={() => setShowUploadForm(false)}
-          // 6. Conectando a função correta ao modal
-          onSubmit={handleUploadSubmit}
-        />
-      )}
-      {showPreview && selectedDocument && (
-        <PDFPreviewModal
-          fileName={selectedDocument.name}
-          onClose={() => { setShowPreview(false); setSelectedDocument(null); }}
-        />
-      )}
-      {showEditModal && selectedDocument && (
-        <EditDocumentModal
-          document={selectedDocument}
-          onClose={() => { setShowEditModal(false); setSelectedDocument(null); }}
-          onSubmit={handleEdit}
-        />
-      )}
 
+      {/* OS MODAIS AGORA ESTÃO DENTRO DO RETURN PRINCIPAL */}
+      {
+        showUploadForm && (
+          <FileUploadModal
+            title={`Novo Documento - ${title}`}
+            onClose={() => setShowUploadForm(false)}
+            onSubmit={handleUploadSubmit}
+          />
+        )
+      }
+      {
+        showPreview && selectedDocument && (
+          <PDFPreviewModal
+            fileName={selectedDocument.name}
+            // ---> A MÁGICA ACONTECE AQUI <---
+            // Passamos o 'path' do documento, não a URL completa
+            filePath={selectedDocument.path}
+            onClose={() => {
+              setShowPreview(false);
+              setSelectedDocument(null);
+            }}
+          />
+        )}
+      {
+        showEditModal && selectedDocument && (
+          <EditDocumentModal
+            document={selectedDocument}
+            onClose={() => { setShowEditModal(false); setSelectedDocument(null); }}
+            onSubmit={handleEdit}
+          />
+        )
+      }
       <ConfirmationModal
         isOpen={!!documentToDelete}
         onClose={() => setDocumentToDelete(null)}
@@ -280,11 +271,8 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
         }
         isLoading={isDeleting}
       />
-      );
-    </div>
+    </div >
   );
 };
-
-
 
 export default DocumentManagement;

@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma'; // Verifique se este é o caminho corret
 import fs from 'fs/promises'; // 1. Importe o 'fs/promises' para lidar com arquivos
 import path from 'path';     // 2. Importe o 'path' para construir caminhos
 
+const UPLOADS_FOLDER = path.resolve(__dirname, '..', '..', 'uploads');
+
 export class FileController {
 
     public async listFiles(req: Request, res: Response): Promise<Response> {
@@ -191,6 +193,44 @@ export class FileController {
         } catch (error) {
             console.error('Erro ao excluir arquivo:', error);
             return res.status(500).json({ message: 'Erro interno do servidor ao excluir o arquivo.' });
+        }
+    }
+
+    public async serveFile(req: Request, res: Response): Promise<void> { // Retorna void pois a resposta é o próprio arquivo
+        try {
+            const { user } = req;
+            const { path: filePath } = req.params; // O path do arquivo vindo da URL
+            const { action } = req.query; // A ação: 'download' ou 'preview'
+
+            // 1. APLICANDO A "CONSTITUIÇÃO" (RBAC E REGRA MESTRA)
+            // Primeiro, buscamos no banco para garantir que este arquivo pertence à empresa do usuário
+            const file = await prisma.file.findFirst({
+                where: {
+                    path: filePath,
+                    companyId: user.company.id,
+                },
+            });
+
+            // Se o arquivo não existe ou não pertence à empresa, acesso negado
+            if (!file) {
+                res.status(404).json({ message: 'Arquivo não encontrado.' });
+                return;
+            }
+
+            // 2. MONTAGEM DO CAMINHO FÍSICO
+            const physicalPath = path.resolve(UPLOADS_FOLDER, file.path);
+
+            // 3. LÓGICA DE ENTREGA
+            if (action === 'download') {
+                // Força o navegador a baixar o arquivo com o nome original (amigável)
+                res.download(physicalPath, file.name);
+            } else {
+                // Tenta exibir o arquivo no navegador (preview)
+                res.sendFile(physicalPath);
+            }
+        } catch (error) {
+            console.error('Erro ao servir o arquivo:', error);
+            res.status(500).json({ message: 'Erro interno ao buscar o arquivo.' });
         }
     }
 
