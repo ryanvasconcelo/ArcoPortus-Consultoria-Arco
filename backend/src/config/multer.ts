@@ -30,12 +30,12 @@ export default {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'image/jpeg',
             'image/png',
+            'text/csv', // <-- ADICIONE ESTA LINHA
         ];
 
         if (allowedMimes.includes(file.mimetype)) {
             callback(null, true);
         } else {
-            // Se usar FileFilterCallback, o primeiro argumento deve ser Error ou null
             callback(new Error('Formato de arquivo não suportado.'));
         }
     }

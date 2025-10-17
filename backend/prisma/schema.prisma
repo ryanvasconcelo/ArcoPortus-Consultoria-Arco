@@ -48,16 +48,29 @@ model File {
   @@map("files")
 }
 
-model Camera {
-  id          String  @id @default(uuid())
-  name        String  // Nome ou identificador da câmera, ex: "CAM-01-PATIO"
-  location    String? // Localização física, ex: "Pátio de Contêineres Leste"
-  ipAddress   String? @unique // Endereço IP, se aplicável
-  model       String? // Modelo da câmera, ex: "Intelbras VIP 3230"
-  isActive    Boolean @default(true)
+// schema.prisma
 
-  // --- A CHAVE DA MULTILOCAÇÃO ---
-  // Garante que toda câmera pertence a uma empresa.
+// schema.prisma
+
+model Camera {
+  id        String  @id @default(uuid())
+  name      String
+  location  String?
+  ipAddress String? @unique
+  model     String?
+  
+  // --- NOVOS CAMPOS E AJUSTES ---
+  fabricante     String?   // Mapeado de: "Fabricante"
+  businessUnit   String?
+  type           String?
+  area           String?
+  hasAnalytics   Boolean?
+  recordingDays  Int?
+  deactivatedAt  DateTime? // <-- A CHAVE PARA "CONGELAR" O CONTADOR
+  
+  isActive  Boolean @default(true)
+
+  // --- Chave Multi-Tenancy ---
   companyId String  @db.Uuid
 
   createdAt DateTime @default(now())
