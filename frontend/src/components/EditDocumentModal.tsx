@@ -1,113 +1,96 @@
-import { useState } from "react";
-import { X, Save, FileText } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // Assuming you use Textarea for description
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Document } from "@/services/fileService"; // Import the correct Document type
 
 interface EditDocumentModalProps {
-  document: {
-    id: string;
-    name: string;
-    description: string;
-    uploadDate: string;
-    size: string;
-    type: string;
-  };
+  // --- CORREÇÃO: Use the imported Document type ---
+  document: Document;
   onClose: () => void;
-  onSubmit: (data: { name: string; description: string }) => void;
+  onSubmit: (data: { name: string; description: string }) => Promise<void> | void; // Allow async submit
 }
 
-export function EditDocumentModal({ document, onClose, onSubmit }: EditDocumentModalProps) {
-  const [formData, setFormData] = useState({
-    name: document.name,
-    description: document.description
-  });
+export const EditDocumentModal = ({ document, onClose, onSubmit }: EditDocumentModalProps) => {
+  const [name, setName] = useState(document.name);
+  const [description, setDescription] = useState(document.description);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ name, description });
+      // onClose(); // Let the parent component handle closing on success if needed
+    } catch (error) {
+      // Error handling can be done here or in the parent component's onSubmit
+      console.error("Failed to submit edit:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Reset form if the document prop changes
+  useEffect(() => {
+    setName(document.name);
+    setDescription(document.description);
+  }, [document]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <Card className="w-full max-w-2xl glass-card border-white/10 animate-scale-in">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Editar Documento
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-            <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Documento *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Razão Social e CNPJ.pdf"
-                  className="glass-input"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição *</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Ex: 1.1.1 Razão Social e CNPJ"
-                  className="glass-input min-h-[100px]"
-                  required
-                />
-              </div>
-
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <div className="text-sm text-muted-foreground">
-                  <strong>Informações do Arquivo:</strong>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Tamanho:</span> {document.size}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Tipo:</span> {document.type}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Data de Upload:</span> {document.uploadDate}
-                  </div>
-                </div>
-              </div>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Editar Documento</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="col-span-3"
+                required
+              />
             </div>
-
-            <div className="flex gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 gradient-primary hover-lift"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Salvar Alterações
-              </Button>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Descrição
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="col-span-3 min-h-[80px]" // Example styling
+                required
+              />
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            {/* Display non-editable info like upload date or size if desired */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-sm text-muted-foreground">Upload:</Label>
+              {/* Use createdAt instead of uploadDate */}
+              <span className="col-span-3 text-sm text-muted-foreground">
+                {new Date(document.createdAt).toLocaleDateString('pt-BR')}
+              </span>
+            </div>
+            {/* You might display size or mimetype here as well */}
+
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-}
+};

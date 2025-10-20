@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.16.2",
+    "@prisma/client": "^6.17.1",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
@@ -43,6 +43,9 @@
     "prisma": "^6.17.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "type": "commonjs"
 }

@@ -3,6 +3,8 @@ declare namespace Express {
     // Define a interface para o payload do nosso token JWT
     export interface ITokenPayload {
         userId: string;
+        // CORREÇÃO: Adicionamos a propriedade 'name' ao nível do usuário.
+        name: string;
         company: {
             id: string;
             name: string;

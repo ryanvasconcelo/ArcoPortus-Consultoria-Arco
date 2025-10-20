@@ -28,7 +28,9 @@ model File {
   name        String
   description String
   category    String   // <-- NOSSA NOVA ETIQUETA
-  path        String   @unique
+  subcategory String?  // Adicione esta linha
+  item        String?  // E esta linha
+  path        String   
   size        Int
   mimetype    String
   type        FileType @default(OTHER)
@@ -44,11 +46,10 @@ model File {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([companyId]) // Adiciona um índice para otimizar buscas por empresa
+  @@index([companyId])
+  @@unique([companyId, category, subcategory, item]) // <-- ESSA REGRA É ESSENCIAL E PERMANECE
   @@map("files")
 }
-
-// schema.prisma
 
 // schema.prisma
 

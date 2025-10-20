@@ -1,94 +1,165 @@
-// src/controllers/FileController.ts
-
 import { Request, Response } from 'express';
-import { prisma } from '../lib/prisma'; // Verifique se este é o caminho correto para sua instância do Prisma
-import fs from 'fs/promises'; // 1. Importe o 'fs/promises' para lidar com arquivos
-import path from 'path';     // 2. Importe o 'path' para construir caminhos
+import { prisma } from '../lib/prisma';
+import { Prisma } from '@prisma/client'; // Necessário para $queryRawUnsafe
+import fs from 'fs/promises';
+import path from 'path';
 
 const UPLOADS_FOLDER = path.resolve(__dirname, '..', '..', 'uploads');
 
 export class FileController {
 
     public async listFiles(req: Request, res: Response): Promise<Response> {
+        console.log('--- [DIAGNÓSTICO LIST FINAL v6] Requisição listFiles recebida ---');
         try {
             const { user } = req;
             const { company } = user;
+            const categoryQuery = req.query.category as string | undefined;
 
-            // 1. EXTRAINDO A CATEGORIA DOS QUERY PARAMETERS DA URL
-            const { category } = req.query as { category: string };
+            if (!categoryQuery) { return res.status(400).json({ message: 'A categoria é obrigatória.' }); }
+            if (!user.permissions.includes('VIEW:DOCUMENTS')) { return res.status(403).json({ message: 'Acesso negado.' }); }
 
-            // 2. VALIDAÇÃO
-            if (!category) {
-                return res.status(400).json({ message: 'A categoria é obrigatória para listar os arquivos.' });
-            }
+            const companyId = company.id;
+            const targetCategory = categoryQuery.trim();
 
-            const requiredPermission = 'VIEW:DOCUMENTS';
-            if (!user.permissions.includes(requiredPermission)) {
-                return res.status(403).json({ message: 'Acesso negado. Permissões insuficientes.' });
-            }
+            console.log(`[DIAGNÓSTICO LIST FINAL v6] Preparando query Prisma para companyId: "${companyId}", category Limpa: "${targetCategory}"`);
 
-            // 3. QUERY ATUALIZADA COM O FILTRO DE CATEGORIA
+            console.log('[DIAGNÓSTICO LIST FINAL v6] Executando prisma.file.findMany...');
             const files = await prisma.file.findMany({
                 where: {
-                    companyId: company.id, // Regra Mestra: Sempre filtra pela empresa do usuário
-                    category: category,      // Nova Regra: Agora também filtra pela categoria solicitada
+                    companyId: companyId,
+                    category: targetCategory,
                 },
-                orderBy: {
-                    createdAt: 'desc',
-                }
+                // --- A CORREÇÃO CRUCIAL: SELECT COMPLETO ---
+                // Garantir que TODOS os campos usados pelo frontend sejam retornados.
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    category: true,
+                    subcategory: true,
+                    item: true,
+                    path: true,
+                    size: true,         // <-- Campo essencial para formatFileSize
+                    mimetype: true,     // <-- Campo essencial para FileThumbnail e handlePreview
+                    type: true,
+                    uploadedById: true,
+                    uploadedByName: true,
+                    companyId: true,
+                    createdAt: true,    // <-- Campo essencial para a data
+                    updatedAt: true
+                },
+                orderBy: { createdAt: 'desc' }
             });
+
+            console.log(`[DIAGNÓSTICO LIST FINAL v6] Query Prisma concluída. Arquivos encontrados: ${files.length}`);
+            // Logs de diagnóstico podem ser removidos agora que a causa raiz foi encontrada
+            // if (files.length === 0) { ... } else { ... }
+
+            // Log para verificar os dados retornados (temporário)
+            // console.log('[DIAGNÓSTICO LIST FINAL v6] Dados retornados:', JSON.stringify(files, null, 2));
+
 
             return res.status(200).json(files);
 
         } catch (error) {
-            console.error('Erro ao listar arquivos:', error);
+            console.error('--- [DIAGNÓSTICO LIST FINAL v6] ERRO CRÍTICO no try-catch ---', error);
             return res.status(500).json({ message: 'Erro interno do servidor.' });
         }
     }
 
-    // ---> NOSSO NOVO MÉTODO <---
     public async uploadFile(req: Request, res: Response): Promise<Response> {
+        console.log('--- Requisição de upload recebida ---');
         try {
             const { user } = req;
             const { company } = user;
-
-            // 1. EXTRAINDO A CATEGORIA DO CORPO DA REQUISIÇÃO
-            const { description, category } = req.body;
+            // Extrai todos os campos potenciais
+            const { description, category, subcategory, item, name: formName } = req.body;
             const file = req.file;
 
-            // 2. VALIDAÇÃO ATUALIZADA
+            // Validação básica do arquivo
             if (!file) {
+                console.log('Upload falhou: Nenhum arquivo fornecido.');
                 return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
             }
-            if (!description || !category) { // Agora, categoria também é obrigatória
+            // Validação básica de descrição/categoria
+            if (!description || !category) {
+                console.log('Upload falhou: Faltando descrição ou categoria.', { description, category });
+                // Limpa arquivo órfão
+                await fs.unlink(file.path).catch(err => console.error("Falha ao limpar arquivo órfão:", err));
                 return res.status(400).json({ message: 'Descrição e categoria são obrigatórias.' });
             }
-
-            const requiredPermission = 'CREATE:DOCUMENTS';
-            if (!user.permissions.includes(requiredPermission)) {
-                return res.status(403).json({ message: 'Acesso negado. Permissão para criar documentos é necessária.' });
+            // Checagem de permissão
+            if (!user.permissions.includes('CREATE:DOCUMENTS')) {
+                console.log('Upload falhou: Permissão negada.');
+                await fs.unlink(file.path).catch(err => console.error("Falha ao limpar arquivo órfão:", err));
+                return res.status(403).json({ message: 'Acesso negado.' });
             }
 
-            const { originalname: name, filename: path, size, mimetype } = file;
+            const { originalname, filename: pathValue, size, mimetype } = file;
+            const finalName = formName || originalname;
 
-            const newFile = await prisma.file.create({
-                data: {
-                    name,
-                    description,
-                    category, // 3. SALVANDO A CATEGORIA NO BANCO
-                    path,
-                    size,
-                    mimetype,
-                    uploadedById: user.userId,
-                    companyId: company.id,
+            let savedFile;
+
+            // --- LÓGICA CONDICIONAL ---
+            if (category === 'normas-e-procedimentos') {
+                // Lógica especial para Normas/Procedimentos: requer 'item' e usa upsert
+                if (!item) {
+                    console.log('Upload falhou (Normas): Faltando campo item.');
+                    await fs.unlink(file.path).catch(err => console.error("Falha ao limpar arquivo órfão:", err));
+                    return res.status(400).json({ message: 'O campo "item" é obrigatório para Normas e Procedimentos.' });
                 }
-            });
+                console.log('Executando UPSERT para Normas e Procedimentos...');
+                savedFile = await prisma.file.upsert({
+                    where: {
+                        companyId_category_subcategory_item: {
+                            companyId: company.id,
+                            category: category, // Já validada
+                            subcategory: subcategory || "",
+                            item: item,
+                        }
+                    },
+                    update: {
+                        name: finalName, description, path: pathValue, size, mimetype,
+                        uploadedById: user.userId, uploadedByName: user.name, // Garanta que user.name existe no token
+                    },
+                    create: {
+                        companyId: company.id, category, subcategory: subcategory || "", item,
+                        name: finalName, description, path: pathValue, size, mimetype,
+                        uploadedById: user.userId, uploadedByName: user.name, // Garanta que user.name existe no token
+                    }
+                });
+                console.log('UPSERT bem-sucedido:', savedFile.id);
 
-            return res.status(201).json(newFile);
+            } else {
+                // Lógica padrão para todas as outras categorias: usa create
+                console.log(`Executando CREATE para categoria: ${category}...`);
+                savedFile = await prisma.file.create({
+                    data: {
+                        companyId: company.id,
+                        category, // Já validada
+                        // Subcategory e item podem ser undefined/null aqui, sem problemas para o create
+                        subcategory: subcategory || null,
+                        item: item || null,
+                        name: finalName,
+                        description,
+                        path: pathValue,
+                        size,
+                        mimetype,
+                        uploadedById: user.userId,
+                        uploadedByName: user.name, // Garanta que user.name existe no token
+                    }
+                });
+                console.log('CREATE bem-sucedido:', savedFile.id);
+            }
+
+            return res.status(200).json(savedFile); // Retorna 200 OK para simplificar em ambos os casos
 
         } catch (error) {
-            console.error('Erro no upload do arquivo:', error);
-            return res.status(500).json({ message: 'Erro interno do servidor ao processar o upload.' });
+            if (req.file) {
+                await fs.unlink(req.file.path).catch(err => console.error("Falha ao limpar arquivo órfão após erro:", err));
+            }
+            console.error('--- ERRO CRÍTICO durante upload ---', error);
+            return res.status(500).json({ message: 'Erro interno do servidor.' });
         }
     }
 

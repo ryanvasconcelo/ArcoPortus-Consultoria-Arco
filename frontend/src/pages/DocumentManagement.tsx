@@ -4,22 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { Input } from "@/components/ui/input";
-import {
-  Upload,
-  Download,
-  Edit3,
-  Trash2,
-  FileText,
-  Plus,
-  Search,
-  Eye
-} from "lucide-react";
+import { Download, Edit3, Trash2, Plus, Search, Eye } from "lucide-react";
 import ArcoPortusHeader from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploadModal } from "@/components/FileUploadModal";
-import { PDFPreviewModal } from "@/components/PDFPreviewModal";
+import { FilePreviewModal } from "@/components/FilePreviewModal";
 import { EditDocumentModal } from "@/components/EditDocumentModal";
+import FileThumbnail from "@/components/FileThumbnail"; // Thumbnail importado
 
 const DocumentManagement = ({ title, category }: { title: string; category: string }) => {
   const { toast } = useToast();
@@ -31,27 +23,24 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // Adicionado estado para busca
 
-  // --- LÓGICA DE DADOS (JÁ ESTÁ PERFEITA!) ---
   useEffect(() => {
     const fetchDocuments = async () => {
       setIsLoading(true);
       try {
         const fetchedDocs = await fileService.listFiles(category);
-        setDocuments(fetchedDocs);
+        // Filtra placeholders APENAS se NÃO for a página de Normas
+        setDocuments(fetchedDocs.filter(doc => category === 'normas-e-procedimentos' || (doc.path && doc.path !== '')));
       } catch (error) {
         console.error("Falha ao buscar documentos:", error);
-        toast({
-          title: "Erro ao carregar",
-          description: "Não foi possível buscar a lista de documentos.",
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao carregar", description: "Não foi possível buscar a lista de documentos.", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
     };
     fetchDocuments();
-  }, [category]);
+  }, [category, toast]);
 
   const handleUploadSubmit = async (fileData: { file: File; name: string; description: string }) => {
     try {
@@ -59,9 +48,11 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
       setDocuments(prevDocuments => [newDocument, ...prevDocuments]);
       setShowUploadForm(false);
       toast({ title: "Sucesso!", description: "Seu documento foi enviado e salvo." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro no upload:", error);
-      toast({ title: "Falha no Upload", description: "Não foi possível salvar o documento.", variant: "destructive" });
+      const serverMessage = error.response?.data?.message || "Não foi possível salvar o documento.";
+      console.log("Resposta detalhada do servidor:", error.response?.data);
+      toast({ title: "Falha no Upload", description: serverMessage, variant: "destructive" });
       throw error;
     }
   };
@@ -100,31 +91,50 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
   const handleDownload = async (doc: Document) => {
     try {
       toast({ title: "Preparando download...", description: `Baixando ${doc.name}` });
-
-      // 1. Pede ao nosso serviço para buscar o arquivo de forma segura
       const fileBlob = await fileService.downloadFile(doc.path);
-
-      // 2. Cria uma URL temporária para o arquivo que está na memória
       const url = window.URL.createObjectURL(fileBlob);
-
-      // 3. Cria um link invisível, clica nele e depois o remove
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', doc.name); // Usa o nome original do arquivo
+      link.setAttribute('download', doc.name);
       document.body.appendChild(link);
       link.click();
-
-      // Limpa a URL da memória
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-
     } catch (error) {
       console.error("Falha no download:", error);
       toast({ title: "Erro", description: "Não foi possível baixar o arquivo.", variant: "destructive" });
     }
   };
 
-  // --- ESTRUTURA JSX (AGORA CORRIGIDA) ---
+  const handlePreview = (doc: Document) => {
+    // Verifica se o mimetype existe e se é PDF ou imagem antes de abrir
+    if (doc.mimetype && (doc.mimetype.includes('pdf') || doc.mimetype.startsWith('image/'))) {
+      setSelectedDocument(doc);
+      setShowPreview(true);
+    } else {
+      toast({
+        title: "Preview não disponível",
+        description: "A pré-visualização só está disponível para arquivos PDF e imagens.",
+        variant: "default"
+      });
+    }
+  };
+
+  // Filtra os documentos com base no termo de busca
+  const filteredDocuments = documents.filter(doc =>
+    doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center">
+        <p>Carregando documentos...</p> {/* Mensagem de Loading */}
+      </div>
+    );
+  }
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <ArcoPortusHeader />
@@ -132,10 +142,11 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
         <div className="flex flex-col lg:flex-row gap-6">
           <Sidebar />
           <div className="flex-1 min-w-0">
-            {/* ... Seu conteúdo de Card, Input, Tabela, etc. ... */}
+            {/* Cabeçalho da Seção */}
             <div className="bg-secondary text-white text-center py-4 rounded-t-lg mb-6">
               <h1 className="text-xl font-bold">{title}</h1>
             </div>
+            {/* Card de Ações (Novo Documento) */}
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -147,120 +158,135 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
                 </div>
               </CardHeader>
             </Card>
+            {/* Barra de Busca */}
             <div className="mb-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input placeholder="Buscar documentos..." className="pl-10" />
+                <Input
+                  placeholder="Buscar por nome ou descrição..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
+            {/* Card da Lista de Documentos */}
             <Card>
-              <CardHeader className="hidden md:block">
-                <div className="grid grid-cols-2 gap-4">
-                  <h3 className="text-lg font-semibold">Descrição</h3>
-                  <h3 className="text-lg font-semibold">Anexo</h3>
+              {/* Cabeçalho da Tabela (Visível apenas em telas maiores) */}
+              <CardHeader className="hidden md:block border-b">
+                <div className="grid grid-cols-6 gap-4 items-center px-4 py-2 text-sm font-medium text-muted-foreground">
+                  <div className="col-span-3">Descrição / Nome do Arquivo</div>
+                  <div className="col-span-1 text-center">Tamanho</div>
+                  <div className="col-span-2 text-right pr-4">Ações</div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start space-x-3">
-                          <span className="w-8 h-8 bg-secondary text-white rounded-lg flex items-center justify-center text-base flex-shrink-0">
-                            {doc.mimetype.includes('pdf') ? '📄' : '📋'}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-medium text-sm md:text-base truncate">{doc.description}</h4>
-                            <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                              <span className="block md:inline truncate">{doc.name}</span>
-                              <span className="hidden md:inline"> • </span>
-                              <span className="block md:inline">
-                                {formatFileSize(doc.size)} • {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
-                              </span>
-                            </p>
+              <CardContent className="p-0 md:p-4"> {/* Ajuste de padding */}
+                {/* Exibe mensagem se não houver documentos */}
+                {filteredDocuments.length === 0 && !isLoading ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    Nenhum documento encontrado{searchTerm ? ' para "' + searchTerm + '"' : ''}.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* --- Início do Loop --- */}
+                    {filteredDocuments.map((doc) => (
+                      <div key={doc.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                        {/* Coluna Esquerda: Thumbnail e Descrição */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start space-x-4">
+                            {/* --- A CORREÇÃO --- */}
+                            {/* Usamos optional chaining (?.) e fallback ('') para garantir que mimeType seja sempre uma string */}
+                            <FileThumbnail filePath={doc.path} mimeType={doc.mimetype ?? ''} fileName={doc.name} />
+                            {/* --- Fim da Correção --- */}
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium text-sm md:text-base truncate" title={doc.name}>{doc.name}</h4>
+                              <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                                <span className="block md:inline truncate" title={doc.description}>{doc.description}</span>
+                                <span className="hidden md:inline"> • </span>
+                                {/* Mostra tamanho apenas em telas maiores */}
+                                <span className="hidden md:inline">
+                                  {formatFileSize(doc.size)} • {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
+                                </span>
+                                {/* Mostra data em telas menores */}
+                                <span className="block md:hidden">
+                                  {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
+                                </span>
+                              </p>
+                            </div>
                           </div>
                         </div>
+                        {/* Coluna Direita: Ações */}
+                        <div className="flex flex-wrap items-center gap-2 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-border/50">
+                          {/* Adicionado verificação se mimetype existe antes de mostrar botão Preview */}
+                          {doc.mimetype && (doc.mimetype.includes('pdf') || doc.mimetype.startsWith('image/')) && (
+                            <Button size="sm" variant="outline" onClick={() => handlePreview(doc)} className="flex-1 xs:flex-initial"> {/* Ajuste responsivo */}
+                              <Eye className="h-4 w-4 md:mr-1" />
+                              <span className="hidden md:inline">Preview</span>
+                              <span className="md:hidden">Ver</span> {/* Texto alternativo menor */}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="flex-1 xs:flex-initial">
+                            <Download className="h-4 w-4 md:mr-1" />
+                            <span className="hidden md:inline">Baixar</span>
+                            <span className="md:hidden">Baixar</span>
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedDocument(doc); setShowEditModal(true); }} className="flex-1 xs:flex-initial">
+                            <Edit3 className="h-4 w-4 md:mr-1" />
+                            <span className="hidden md:inline">Editar</span>
+                            <span className="md:hidden">Editar</span>
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => setDocumentToDelete(doc)} className="flex-1 xs:flex-initial">
+                            <Trash2 className="h-4 w-4 md:mr-1" />
+                            <span className="hidden md:inline">Excluir</span>
+                            <span className="md:hidden">Excluir</span>
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          // CORREÇÃO: Remova a chamada para handlePreview(doc) daqui.
-                          // Apenas abra o modal, como você já estava fazendo.
-                          onClick={() => { setSelectedDocument(doc); setShowPreview(true); }}
-                          className="flex-1 md:flex-initial"
-                        >
-                          <Eye className="h-4 w-4 md:mr-1" />
-                          <span className="hidden md:inline">Preview</span>
-                        </Button>
-
-                        <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="flex-1 md:flex-initial">
-                          <Download className="h-4 w-4 md:mr-1" />
-                          <span className="hidden md:inline">Baixar</span>
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedDocument(doc); setShowEditModal(true); }} className="flex-1 md:flex-initial">
-                          <Edit3 className="h-4 w-4 md:mr-1" />
-                          <span className="hidden md:inline">Editar</span>
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => setDocumentToDelete(doc)} className="flex-1 md:flex-initial">
-                          <Trash2 className="h-4 w-4 md:mr-1" />
-                          <span className="hidden md:inline">Excluir</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                    {/* --- Fim do Loop --- */}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
-      </main >
+      </main>
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
         <div className="container mx-auto">
           © 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.
         </div>
       </footer>
 
-      {/* OS MODAIS AGORA ESTÃO DENTRO DO RETURN PRINCIPAL */}
-      {
-        showUploadForm && (
-          <FileUploadModal
-            title={`Novo Documento - ${title}`}
-            onClose={() => setShowUploadForm(false)}
-            onSubmit={handleUploadSubmit}
-          />
-        )
-      }
-      {
-        showPreview && selectedDocument && (
-          <PDFPreviewModal
-            fileName={selectedDocument.name}
-            // ---> A MÁGICA ACONTECE AQUI <---
-            // Passamos o 'path' do documento, não a URL completa
-            filePath={selectedDocument.path}
-            onClose={() => {
-              setShowPreview(false);
-              setSelectedDocument(null);
-            }}
-          />
-        )}
-      {
-        showEditModal && selectedDocument && (
-          <EditDocumentModal
-            document={selectedDocument}
-            onClose={() => { setShowEditModal(false); setSelectedDocument(null); }}
-            onSubmit={handleEdit}
-          />
-        )
-      }
+      {/* Modais */}
+      {showUploadForm && (
+        <FileUploadModal
+          title={`Novo Documento - ${title}`}
+          onClose={() => setShowUploadForm(false)}
+          onSubmit={handleUploadSubmit}
+        />
+      )}
+      {showPreview && selectedDocument && (
+        <FilePreviewModal
+          fileName={selectedDocument.name}
+          filePath={selectedDocument.path}
+          mimeType={selectedDocument.mimetype ?? ''}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedDocument(null);
+          }}
+        />
+      )}
+      {showEditModal && selectedDocument && (
+        <EditDocumentModal
+          document={selectedDocument}
+          onClose={() => { setShowEditModal(false); setSelectedDocument(null); }}
+          onSubmit={handleEdit}
+        />
+      )}
       <ConfirmationModal
         isOpen={!!documentToDelete}
         onClose={() => setDocumentToDelete(null)}
-        onConfirm={() => {
-          if (documentToDelete) {
-            handleDelete(documentToDelete.id);
-          }
-        }}
+        onConfirm={() => { if (documentToDelete) { handleDelete(documentToDelete.id); } }}
         title="Confirmar Exclusão"
         message={
           <>
@@ -271,7 +297,7 @@ const DocumentManagement = ({ title, category }: { title: string; category: stri
         }
         isLoading={isDeleting}
       />
-    </div >
+    </div>
   );
 };
 

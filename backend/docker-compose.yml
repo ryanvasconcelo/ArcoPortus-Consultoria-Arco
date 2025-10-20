@@ -12,38 +12,52 @@ services:
       - arcoportus-data:/var/lib/postgresql/data
     networks:
       - arcoportus-net
+    # --- ALTERAÇÃO 1: ADICIONANDO HEALTHCHECK ---
+    # Garante que o container só é "saudável" quando o Postgres está pronto.
+    healthcheck:
+      # Use as variáveis de usuário e banco do SEU .env
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] 
+      interval: 10s       # Verifica a cada 10 segundos
+      timeout: 5s        # Espera 5 segundos pela resposta
+      retries: 5         # Tenta 5 vezes antes de marcar como não saudável
+      start_period: 10s  # Espera 10 segundos após iniciar antes de checar
 
   # Serviço do Backend
-  # Serviço do Backend (Modo Desenvolvimento)
   arcoportus_backend:
     container_name: arcoportus_backend_api
-    # NÃO USA o Dockerfile complexo, usa uma imagem base e um comando direto
     image: node:18-alpine 
     working_dir: /app
-    command: sh -c "npm install && npx prisma migrate deploy && npm run dev"
+    # --- ALTERAÇÃO CRUCIAL: GARANTIR MIGRAÇÕES ANTES DE 'npm run dev' ---
+    # 1. Instala dependências
+    # 2. Garante que o Prisma Client está gerado
+    # 3. Aplica quaisquer migrações pendentes (seguro para rodar sempre)
+    # 4. SÓ ENTÃO inicia o servidor de desenvolvimento
+    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npm run dev" 
     restart: always
     env_file:
       - ./.env
     ports:
       - "${BACKEND_PORT}:3335"
     volumes:
-      - .:/app                  # Mapeia TUDO (código, package.json, etc.)
-      - /app/node_modules       # Isola o node_modules
-    depends_on:
-      - arcoportus_db 
+      - .:/app
+      - /app/node_modules
     networks:
       - arcoportus-net
+    # depends_on com condition permanece, garantindo que o DB esteja 'healthy' antes deste comando rodar
+    depends_on:
+      arcoportus_db:
+        condition: service_healthy
 
-  # Serviço do Frontend
+  # Serviço do Frontend (sem alterações)
   arcoportus_frontend:
     container_name: arcoportus_frontend_ui
     build:
-      context: ../frontend # Constrói a imagem usando o Dockerfile na pasta frontend/
+      context: ../frontend 
     restart: always
     ports:
       - "${FRONTEND_PORT}:5174"
     volumes:
-      - ../frontend/src:/app/src # Monta o código-fonte para hot-reloading
+      - ../frontend/src:/app/src 
     depends_on:
       - arcoportus_backend
     networks:
