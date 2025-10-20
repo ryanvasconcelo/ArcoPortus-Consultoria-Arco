@@ -3,67 +3,94 @@
 import { useState, useEffect } from "react";
 
 interface RecordingTimerProps {
-    createdAt: string;      // Quando o registro foi criado no nosso sistema
-    initialDays: number | null; // Os dias de gravação que vieram da planilha
-    deactivatedAt: string | null;
+    createdAt: string;
+    // --- ALTERAÇÃO 1: Recebe HORAS (Float) em vez de DIAS (Int) ---
+    initialHours: number | null | undefined;
+    deactivatedAt: string | null | undefined;
     isActive: boolean;
 }
 
+// Função de formatação permanece a mesma (com segundos)
 const formatElapsedTime = (ms: number) => {
-    if (ms < 0) return "0d 00:00";
-    const totalMinutes = Math.floor(ms / (1000 * 60));
+    if (ms < 0) return "0d 00h00m00s";
+    const totalSeconds = Math.floor(ms / 1000);
+    const totalMinutes = Math.floor(totalSeconds / 60);
     const totalHours = Math.floor(totalMinutes / 60);
     const days = Math.floor(totalHours / 24);
     const hours = totalHours % 24;
     const minutes = totalMinutes % 60;
+    const seconds = totalSeconds % 60;
     const pad = (num: number) => num.toString().padStart(2, '0');
-    return `${days}d ${pad(hours)}:${pad(minutes)}`;
+    return `${days}d ${pad(hours)}h${pad(minutes)}m${pad(seconds)}s`;
 };
 
-export function RecordingTimer({ createdAt, initialDays, deactivatedAt, isActive }: RecordingTimerProps) {
+export function RecordingTimer({ createdAt, initialHours, deactivatedAt, isActive }: RecordingTimerProps) {
     const [timeElapsed, setTimeElapsed] = useState("Calculando...");
 
     useEffect(() => {
-        // Se não temos um ponto de partida, não há o que calcular.
-        if (initialDays === null) {
-            setTimeElapsed("-");
+        // --- ALTERAÇÃO 2: Validação usa initialHours ---
+        if (typeof initialHours !== 'number' || isNaN(initialHours) || initialHours < 0) {
+            setTimeElapsed("-"); // Mostra '-' se o valor inicial for inválido
+            return;
+        }
+        const registrationDate = new Date(createdAt);
+        if (isNaN(registrationDate.getTime())) {
+            setTimeElapsed("Data Inválida");
             return;
         }
 
-        const registrationDate = new Date(createdAt);
-        // O tempo inicial de gravação, convertido para milissegundos.
-        const initialDurationMs = initialDays * 24 * 60 * 60 * 1000;
+        // --- ALTERAÇÃO 3: Cálculo base usa initialHours ---
+        // Converte as horas iniciais (que podem ter decimais) para milissegundos
+        const initialDurationMs = initialHours * 60 * 60 * 1000;
 
         const calculateTime = () => {
-            // REGRA DE "CONGELAMENTO"
+            let totalTimeMs = initialDurationMs;
+            let shouldStopInterval = false;
+
             if (!isActive && deactivatedAt) {
+                // Lógica de congelamento (usa initialDurationMs calculado com horas)
                 const deactivationDate = new Date(deactivatedAt);
-                const timeSinceRegistration = deactivationDate.getTime() - registrationDate.getTime();
-                const totalTimeMs = initialDurationMs + timeSinceRegistration;
-                setTimeElapsed(formatElapsedTime(totalTimeMs));
-                return null; // Para o contador
+                if (!isNaN(deactivationDate.getTime()) && deactivationDate >= registrationDate) {
+                    const timeSinceRegistrationUntilDeactivation = deactivationDate.getTime() - registrationDate.getTime();
+                    if (timeSinceRegistrationUntilDeactivation > 0) { totalTimeMs += timeSinceRegistrationUntilDeactivation; }
+                } else { totalTimeMs = Math.max(initialDurationMs, 0); }
+                shouldStopInterval = true;
+
+            } else if (isActive) {
+                // Lógica do contador ativo (usa initialDurationMs calculado com horas)
+                const now = new Date();
+                const timeSinceRegistration = now.getTime() - registrationDate.getTime();
+                if (timeSinceRegistration > 0) { totalTimeMs += timeSinceRegistration; }
+            } else {
+                totalTimeMs = Math.max(initialDurationMs, 0);
+                shouldStopInterval = true;
             }
 
-            // LÓGICA DO CONTADOR VIVO
-            const now = new Date();
-            // Calcula o tempo que passou DESDE que o registro foi criado no nosso sistema
-            const timeSinceRegistration = now.getTime() - registrationDate.getTime();
-            // O tempo total é o tempo inicial + o tempo que passou desde então
-            const totalTimeMs = initialDurationMs + timeSinceRegistration;
             setTimeElapsed(formatElapsedTime(totalTimeMs));
-            return true; // Continua o contador
+            return shouldStopInterval;
         };
 
-        if (calculateTime() === null) return;
-        const intervalId = setInterval(() => {
-            if (calculateTime() === null) {
+        const stopInterval = calculateTime(); // Calcula o valor inicial
+
+        let intervalId: NodeJS.Timeout | null = null;
+        if (!stopInterval && isActive) {
+            // Intervalo permanece de 1 segundo
+            intervalId = setInterval(() => {
+                if (calculateTime()) {
+                    if (intervalId) clearInterval(intervalId);
+                }
+            }, 1000);
+        }
+
+        // Função de limpeza permanece a mesma
+        return () => {
+            if (intervalId) {
                 clearInterval(intervalId);
             }
-        }, 60000); // Atualiza a cada minuto
+        };
 
-        return () => clearInterval(intervalId);
+        // --- ALTERAÇÃO 4: Dependência agora é initialHours ---
+    }, [createdAt, initialHours, deactivatedAt, isActive]);
 
-    }, [createdAt, initialDays, deactivatedAt, isActive]);
-
-    return <span className="font-mono">{timeElapsed}</span>;
+    return <span className="font-mono tabular-nums">{timeElapsed}</span>;
 }

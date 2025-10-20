@@ -66,7 +66,7 @@ model Camera {
   type           String?
   area           String?
   hasAnalytics   Boolean?
-  recordingDays  Int?
+  recordingHours Float?
   deactivatedAt  DateTime? // <-- A CHAVE PARA "CONGELAR" O CONTADOR
   
   isActive  Boolean @default(true)
@@ -78,5 +78,7 @@ model Camera {
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
+  @@index([companyId, name])
+  @@unique([companyId, ipAddress]) // IP é único por empresa
   @@map("cameras")
 }

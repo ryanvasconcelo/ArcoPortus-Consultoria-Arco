@@ -18,7 +18,7 @@ export default {
         },
     }),
     limits: {
-        fileSize: 10 * 1024 * 1024,
+        fileSize: 50 * 1024 * 1024,
     },
     // Tipagem Correta para fileFilter:
     fileFilter: (req: Request, file: Express.Multer.File, callback: FileFilterCallback) => {
