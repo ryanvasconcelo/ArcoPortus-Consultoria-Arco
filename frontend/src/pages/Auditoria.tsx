@@ -1,4 +1,6 @@
+// frontend/src/pages/Auditoria.tsx
 import { useState, useEffect, useCallback } from "react";
+<<<<<<< Updated upstream
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,13 +34,73 @@ const formatModuleName = (log: AuditLog): string => {
 // Configuração dos Cards (Design com círculo colorido)
 const cardConfig: {
   [key: string]: { icon: React.ElementType; color: string; label: string; severity: string; };
+=======
+import {
+  BarChart,
+  ShieldAlert,
+  Shield,
+  ShieldCheck,
+  Loader2 // <-- Importar Loader2
+} from "lucide-react";
+import ArcoPortusHeader from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
+import {
+  auditService,
+  AuditLog,
+  AuditStats,
+  AuditFilters,
+  PaginationInfo,
+} from "../services/auditService";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+// Nossos componentes componentizados
+import { AuditStatsCard } from "../components/audit/AuditStatsCard";
+import { AuditFiltersCard } from "../components/audit/AuditFilters"; // <-- MUDANÇA: Nome
+import { AuditToolbar } from "../components/audit/AuditToolbar";
+import { AuditTable } from "../components/audit/AuditTable";
+import { formatModuleName } from "../utils/auditHelpers";
+
+// ... (cardConfig permanece o mesmo da última vez) ...
+const cardConfig: {
+  [key: string]: {
+    icon: React.ElementType;
+    color: string;
+    label: string;
+    severity: string;
+  };
+>>>>>>> Stashed changes
 } = {
-  total: { icon: BarChart, color: "text-blue-600 bg-blue-100", label: "Total", severity: "all" },
-  alta: { icon: ShieldAlert, color: "text-red-600 bg-red-100", label: "Severidade Alta", severity: "ALTA" },
-  media: { icon: Shield, color: "text-yellow-600 bg-yellow-100", label: "Severidade Média", severity: "MEDIA" },
-  baixa: { icon: ShieldCheck, color: "text-green-600 bg-green-100", label: "Severidade Baixa", severity: "BAIXA" },
+  total: {
+    icon: BarChart,
+    color: "text-blue-600 bg-blue-100",
+    label: "Total",
+    severity: "all",
+  },
+  alta: {
+    icon: ShieldAlert,
+    color: "text-red-600 bg-red-100",
+    label: "Severidade Alta",
+    severity: "ALTA",
+  },
+  media: {
+    icon: Shield,
+    color: "text-yellow-600 bg-yellow-100",
+    label: "Severidade Média",
+    severity: "MEDIA",
+  },
+  baixa: {
+    icon: ShieldCheck,
+    color: "text-green-600 bg-green-100",
+    label: "Severidade Baixa",
+    severity: "BAIXA",
+  },
 };
 
+<<<<<<< Updated upstream
 // Lista de módulos para o dropdown
 const modulos = [
   { value: "all", label: "Todos Módulos" },
@@ -57,12 +119,35 @@ const Auditoria = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({ page: 1, pageSize: 7, totalItems: 0, totalPages: 1 });
+=======
+
+const Auditoria = () => {
+  // --- MUDANÇA: Estado de filtros atualizado ---
+  const [filters, setFilters] = useState<AuditFilters>({
+    startDate: "",
+    endDate: "",
+    severity: "all",
+    modulo: "all",
+    usuario: "",
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [stats, setStats] = useState<AuditStats | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    pageSize: 20,
+    totalItems: 0,
+    totalPages: 1,
+  });
+>>>>>>> Stashed changes
   const [isLoading, setIsLoading] = useState(true);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<AuditStats | null>(null); // Definido aqui
 
+<<<<<<< Updated upstream
   const fetchLogs = useCallback(async (page = 1) => {
     setIsLoading(true);
     setError(null);
@@ -77,8 +162,34 @@ const Auditoria = () => {
       setIsLoading(false);
     }
   }, [filters, searchTerm, pagination.pageSize]);
+=======
+  // --- MUDANÇA: Lógica de busca de dados atualizada ---
+  const fetchLogs = useCallback(
+    async (page = 1) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await auditService.listLogs(
+          filters,
+          searchTerm,
+          page,
+          pagination.pageSize
+        );
+        setLogs(response.data);
+        setPagination(response.pagination);
+      } catch (err) {
+        setError("Falha ao carregar os registros.");
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [filters, searchTerm, pagination.pageSize] // <-- Atualizado
+  );
+>>>>>>> Stashed changes
 
   const fetchStats = useCallback(async () => {
+    // ... (permanece o mesmo)
     setIsStatsLoading(true);
     try {
       const data = await auditService.getAuditStats();
@@ -89,11 +200,18 @@ const Auditoria = () => {
 
   useEffect(() => {
     fetchStats();
+<<<<<<< Updated upstream
     fetchLogs(1); // Re-fetches logs when dependencies change
   }, [filters, searchTerm, fetchStats]);
 
+=======
+    fetchLogs(1);
+  }, [filters, searchTerm, fetchStats]);
+
+  // --- MUDANÇA: Handlers atualizados ---
+>>>>>>> Stashed changes
   const handleFilterChange = (key: keyof AuditFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const handlePageChange = (newPage: number) => {
@@ -104,20 +222,44 @@ const Auditoria = () => {
 
   const handleClearFilters = () => {
     setFilters({
+<<<<<<< Updated upstream
       startDate: "", endDate: "", severity: "all", modulo: "all", usuario: ""
+=======
+      startDate: "",
+      endDate: "",
+      severity: "all",
+      modulo: "all",
+      usuario: "",
+>>>>>>> Stashed changes
     });
     setSearchTerm("");
   };
 
+<<<<<<< Updated upstream
   const handleExportPDF = async () => {
     setIsExporting(true);
     toast.info("Iniciando exportação...", { description: "Buscando todos os registros para gerar o PDF." });
     try {
       const response = await auditService.listLogs(
         filters, searchTerm, 1, pagination.totalItems > 0 ? pagination.totalItems : 1000
+=======
+  // ... (handleExportPDF permanece o mesmo da última vez) ...
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    toast.info("Iniciando exportação...", {
+      description: "Buscando todos os registros para gerar o PDF.",
+    });
+    try {
+      const response = await auditService.listLogs(
+        filters,
+        searchTerm,
+        1,
+        pagination.totalItems > 0 ? pagination.totalItems : 1000
+>>>>>>> Stashed changes
       );
       const doc = new jsPDF();
       doc.text("Relatório de Auditoria - Arco Portus", 14, 16);
+<<<<<<< Updated upstream
       const tableColumn = ["Data/Hora", "Usuário", "Ação", "Módulo", "Alvo", "Severidade", "Detalhe"];
       const tableRows = response.data.map(log => [
         format(new Date(log.createdAt), 'dd/MM/yy HH:mm', { locale: ptBR }),
@@ -182,7 +324,103 @@ const Auditoria = () => {
         </Card>
       );
     });
+=======
+
+      const tableColumn = [
+        "Data/Hora",
+        "Usuário",
+        "Ação",
+        "Módulo",
+        "Alvo",
+        "Severidade",
+        "Detalhe",
+      ];
+      const tableRows = response.data.map((log) => [
+        format(new Date(log.createdAt), "dd/MM/yy HH:mm", { locale: ptBR }),
+        log.userName,
+        log.action,
+        formatModuleName(log),
+        log.target || "N/A", // <-- MUDANÇA: Alvo
+        log.severity,
+        log.details,
+      ]);
+
+      (doc as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [38, 38, 38] },
+        columnStyles: {
+          6: { cellWidth: 80 },
+        },
+      });
+
+      doc.save(`auditoria_${new Date().toISOString().split("T")[0]}.pdf`);
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      console.error("Falha ao exportar PDF:", error);
+      toast.error("Falha ao exportar PDF", {
+        description: "Ocorreu um erro ao gerar o relatório.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
+
+  // ... (renderStatCards permanece o mesmo da última vez) ...
+  const renderStatCards = () => {
+    if (isStatsLoading) {
+      return Array(4)
+        .fill(0)
+        .map((_, i) => (
+          <AuditStatsCard
+            key={`skeleton-${i}`}
+            label="Carregando..."
+            value={0}
+            icon={Loader2}
+            color="animate-pulse"
+            isActive={false}
+            onClick={() => { }}
+          />
+        ));
+    }
+    const cardsData = [
+      {
+        key: "total",
+        config: cardConfig.total,
+        count: stats?.total ?? 0,
+      },
+      {
+        key: "alta",
+        config: cardConfig.alta,
+        count: stats?.bySeverity.ALTA ?? 0,
+      },
+      {
+        key: "media",
+        config: cardConfig.media,
+        count: stats?.bySeverity.MEDIA ?? 0,
+      },
+      {
+        key: "baixa",
+        config: cardConfig.baixa,
+        count: stats?.bySeverity.BAIXA ?? 0,
+      },
+    ];
+    return cardsData.map((card) => (
+      <AuditStatsCard
+        key={card.key}
+        label={card.config.label}
+        value={card.count}
+        icon={card.config.icon}
+        color={card.config.color}
+        isActive={filters.severity === card.config.severity}
+        onClick={() => handleFilterChange("severity", card.config.severity)}
+      />
+    ));
+>>>>>>> Stashed changes
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -191,15 +429,22 @@ const Auditoria = () => {
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <Sidebar />
           <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
+
+            {/* --- MUDANÇA: Cabeçalho de Título Adicionado --- */}
             <div className="bg-secondary text-white text-center py-4 sm:py-6 rounded-lg shadow-md px-4">
-              <h1 className="text-lg sm:text-2xl font-bold">SISTEMA DE AUDITORIA</h1>
-              <p className="text-xs sm:text-sm text-white/80 mt-1">Monitoramento e rastreabilidade de ações</p>
+              <h1 className="text-lg sm:text-2xl font-bold">
+                SISTEMA DE AUDITORIA
+              </h1>
+              <p className="text-xs sm:text-sm text-white/80 mt-1">
+                Monitoramento e rastreabilidade de ações
+              </p>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
               {renderStatCards()}
             </div>
 
+<<<<<<< Updated upstream
             <Card className="shadow-sm">
               <CardHeader className="p-4 sm:p-6 border-b">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -305,11 +550,48 @@ const Auditoria = () => {
               Os logs de auditoria são mantidos por 30 dias e depois excluídos automaticamente.
             </div>
 
+=======
+            {/* --- MUDANÇA: Componente de Filtro Atualizado --- */}
+            <AuditFiltersCard
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClearFilters={handleClearFilters}
+            />
+
+            {/* --- MUDANÇA: Componente de Toolbar Atualizado --- */}
+            <AuditToolbar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onExportPDF={handleExportPDF}
+              isExporting={isExporting}
+            />
+
+            <AuditTable
+              logs={logs}
+              pagination={pagination}
+              isLoading={isLoading}
+              error={error}
+              onPageChange={handlePageChange}
+            />
+
+            <div className="rounded-lg border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
+              Os logs de auditoria são mantidos por 30 dias e depois excluídos
+              automaticamente.
+            </div>
+>>>>>>> Stashed changes
           </div>
         </div>
       </main>
+
       <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/50">
+<<<<<<< Updated upstream
         <div className="container mx-auto"> © 2025_V02 Arco Security I Academy I Solutions - Todos os direitos reservados. </div>
+=======
+        <div className="container mx-auto">
+          © 2025_V02 Arco Security I Academy I Solutions - Todos os direitos
+          reservados.
+        </div>
+>>>>>>> Stashed changes
       </footer>
     </div>
   );
