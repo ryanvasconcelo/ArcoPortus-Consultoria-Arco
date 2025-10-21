@@ -1,30 +1,34 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { Prisma, LogSeverity } from '@prisma/client'; // Importar LogSeverity
+import { Prisma, LogSeverity } from '@prisma/client';
 
 export class AuditController {
 
     public async listLogs(req: Request, res: Response): Promise<Response> {
         const { company } = req.user;
-        // --- MUDANÇA 3: Filtros simplificados ---
         const {
             startDate,
             endDate,
-            severity, // <-- NOVO FILTRO
-            usuario, // <-- Barra de pesquisa
+            severity,
+            modulo,           // Filtro específico de Módulo
+            usuario,          // Filtro específico de Usuário
+            searchTerm,       // Pesquisa principal (da barra)
             page = '1',
-            pageSize = '20'
+            pageSize = '7' // Default page size adjusted if needed, though frontend sends it
         } = req.query;
 
+        // Ensure pageSize from query is used, default to 7 if not provided
+        const limit = parseInt(pageSize as string || '7', 10);
         const pageNumber = parseInt(page as string, 10);
-        const limit = parseInt(pageSize as string, 10);
         const skip = (pageNumber - 1) * limit;
+
 
         try {
             const where: Prisma.AuditLogWhereInput = {
                 companyId: company.id,
             };
 
+            // Date Filters
             const createdAtFilter: Prisma.DateTimeFilter = {};
             if (startDate) {
                 createdAtFilter.gte = new Date(startDate as string);
@@ -38,23 +42,40 @@ export class AuditController {
                 where.createdAt = createdAtFilter;
             }
 
-            // --- MUDANÇA 4: Adicionado filtro de severidade ---
+            // Severity Filter (from cards)
             if (severity && severity !== 'all') {
                 where.severity = severity as LogSeverity;
             }
 
-            // --- MUDANÇA 5: Barra de pesquisa agora procura em múltiplos campos ---
+            // Module Filter (from dropdown)
+            if (modulo && modulo !== 'all') {
+                const fileModules = ['legislacao', 'normas-e-procedimentos', 'documentos-registros', 'diagnostico-ear'];
+                if (fileModules.includes(modulo as string)) {
+                    where.module = 'FILES';
+                    where.target = modulo as string;
+                } else {
+                    where.module = modulo as string;
+                }
+            }
+
+            // User Filter (from input)
             if (usuario) {
-                const search = usuario as string;
+                where.userName = { contains: usuario as string, mode: 'insensitive' };
+            }
+
+            // Main Search Term Filter (from search bar)
+            if (searchTerm) {
+                const search = searchTerm as string;
+                // Search across multiple relevant fields
                 where.OR = [
-                    { userName: { contains: search, mode: 'insensitive' } },
                     { details: { contains: search, mode: 'insensitive' } },
                     { target: { contains: search, mode: 'insensitive' } },
                     { action: { contains: search, mode: 'insensitive' } },
-                    { module: { contains: search, mode: 'insensitive' } },
+                    { userName: { contains: search, mode: 'insensitive' } } // Also search username in main search
                 ];
             }
 
+            // Database Queries
             const [logs, totalItems] = await prisma.$transaction([
                 prisma.auditLog.findMany({
                     where,
@@ -67,6 +88,7 @@ export class AuditController {
 
             const totalPages = Math.ceil(totalItems / limit);
 
+            // Response
             return res.status(200).json({
                 data: logs,
                 pagination: { page: pageNumber, pageSize: limit, totalItems, totalPages }
@@ -82,7 +104,6 @@ export class AuditController {
         try {
             const where: Prisma.AuditLogWhereInput = { companyId: company.id };
 
-            // --- MUDANÇA 6: Agrupar por Severidade, não por Módulo ---
             const totalPromise = prisma.auditLog.count({ where });
             const bySeverityPromise = prisma.auditLog.groupBy({
                 by: ['severity'],
@@ -95,7 +116,6 @@ export class AuditController {
                 bySeverityPromise
             ]);
 
-            // Formata a resposta para ser amigável para o frontend
             const bySeverity = {
                 BAIXA: bySeverityResult.find(s => s.severity === 'BAIXA')?._count.severity || 0,
                 MEDIA: bySeverityResult.find(s => s.severity === 'MEDIA')?._count.severity || 0,

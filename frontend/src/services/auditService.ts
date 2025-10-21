@@ -1,7 +1,6 @@
 import api from './api';
 
-// --- Tipos de Dados ---
-
+// --- Interfaces ---
 export interface AuditLog {
     id: string;
     action: string;
@@ -14,7 +13,7 @@ export interface AuditLog {
     userName: string;
     userRole: string;
     companyId: string;
-    companyName: string | null; // <-- MUDANÇA 1: Adicionado
+    companyName: string | null;
     createdAt: string;
 }
 
@@ -30,7 +29,6 @@ export interface ListLogsResponse {
     pagination: PaginationInfo;
 }
 
-// --- MUDANÇA 2: Interface de Stats atualizada ---
 export interface AuditStats {
     total: number;
     bySeverity: {
@@ -40,31 +38,29 @@ export interface AuditStats {
     };
 }
 
-// --- MUDANÇA 3: Interface de Filtros atualizada ---
 export interface AuditFilters {
     startDate: string;
     endDate: string;
     severity: string; // "all", "BAIXA", "MEDIA", "ALTA"
-    // 'modulo', 'acao' e 'usuario' (do filtro) removidos
+    modulo: string;
+    usuario: string;  // Filtro específico de usuário
 }
 
 // --- Funções do Serviço ---
-
 export const auditService = {
-    /**
-     * Busca a lista paginada de logs.
-     */
     listLogs: async (
         filters: AuditFilters,
-        searchTerm: string, // <-- MUDANÇA 4: Barra de pesquisa separada
+        searchTerm: string, // Pesquisa principal da barra
         page: number,
         pageSize: number
     ): Promise<ListLogsResponse> => {
         try {
             const response = await api.get<ListLogsResponse>('/api/audit', {
                 params: {
+                    // Envia os filtros específicos (startDate, endDate, severity, modulo, usuario)
                     ...filters,
-                    usuario: searchTerm, // O backend espera a pesquisa como 'usuario'
+                    // Envia o termo da barra de pesquisa principal como 'searchTerm'
+                    searchTerm: searchTerm,
                     page,
                     pageSize,
                 },
@@ -76,12 +72,8 @@ export const auditService = {
         }
     },
 
-    /**
-     * Busca as estatísticas (cards).
-     */
     getAuditStats: async (): Promise<AuditStats> => {
         try {
-            // A chamada não muda, mas a resposta (AuditStats) é diferente
             const response = await api.get<AuditStats>('/api/audit/stats');
             return response.data;
         } catch (error) {
