@@ -10,15 +10,9 @@ export class AuditController {
             startDate,
             endDate,
             severity,
-<<<<<<< Updated upstream
             modulo,           // Filtro específico de Módulo
             usuario,          // Filtro específico de Usuário
             searchTerm,       // Pesquisa principal (da barra)
-=======
-            modulo,           // <-- RE-ADICIONADO
-            usuario,          // <-- RE-ADICIONADO
-            searchTerm,       // <-- Pesquisa principal
->>>>>>> Stashed changes
             page = '1',
             pageSize = '7' // Default page size adjusted if needed, though frontend sends it
         } = req.query;
@@ -48,22 +42,13 @@ export class AuditController {
                 where.createdAt = createdAtFilter;
             }
 
-<<<<<<< Updated upstream
             // Severity Filter (from cards)
-=======
->>>>>>> Stashed changes
             if (severity && severity !== 'all') {
                 where.severity = severity as LogSeverity;
             }
 
-<<<<<<< Updated upstream
             // Module Filter (from dropdown)
             if (modulo && modulo !== 'all') {
-=======
-            // --- MUDANÇA: Lógica de Filtro Atualizada ---
-            if (modulo && modulo !== 'all') {
-                // Se o módulo for um dos "FILES", pesquisamos pelo target
->>>>>>> Stashed changes
                 const fileModules = ['legislacao', 'normas-e-procedimentos', 'documentos-registros', 'diagnostico-ear'];
                 if (fileModules.includes(modulo as string)) {
                     where.module = 'FILES';
@@ -73,36 +58,22 @@ export class AuditController {
                 }
             }
 
-<<<<<<< Updated upstream
             // User Filter (from input)
-=======
-            // Filtro específico para o nome do usuário
->>>>>>> Stashed changes
             if (usuario) {
                 where.userName = { contains: usuario as string, mode: 'insensitive' };
             }
 
-<<<<<<< Updated upstream
             // Main Search Term Filter (from search bar)
             if (searchTerm) {
                 const search = searchTerm as string;
                 // Search across multiple relevant fields
-=======
-            // Pesquisa principal (barra de pesquisa)
-            if (searchTerm) {
-                const search = searchTerm as string;
->>>>>>> Stashed changes
                 where.OR = [
                     { details: { contains: search, mode: 'insensitive' } },
                     { target: { contains: search, mode: 'insensitive' } },
                     { action: { contains: search, mode: 'insensitive' } },
-<<<<<<< Updated upstream
                     { userName: { contains: search, mode: 'insensitive' } } // Also search username in main search
-=======
->>>>>>> Stashed changes
                 ];
             }
-            // --- Fim da Mudança ---
 
             // Database Queries
             const [logs, totalItems] = await prisma.$transaction([
