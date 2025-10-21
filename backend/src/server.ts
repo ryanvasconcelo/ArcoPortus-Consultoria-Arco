@@ -47,7 +47,6 @@ app.use('/api/audit', auditRoutes);
 
 // --- MUDANÇA: Capturar o 'server' e iniciar o Cron Job ---
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Arco Portus server is running on http://localhost:${PORT}`);
 
     // Regra de Negócio: Reter logs por 30 dias
     // Executa a limpeza 10 segundos após o servidor iniciar 
