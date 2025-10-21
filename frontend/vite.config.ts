@@ -17,4 +17,10 @@ export default defineConfig({
       usePolling: true, // Ajuda na detecção de mudanças de arquivo dentro do Docker
     },
   },
+  preview: {
+    host: true,
+    port: 5174,
+    strictPort: true,
+    allowedHosts: ['arcoportus.pktech.ai', 'localhost', '.pktech.ai']
+  }
 })
