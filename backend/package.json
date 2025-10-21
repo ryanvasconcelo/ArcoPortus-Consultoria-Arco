@@ -23,6 +23,8 @@
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "multer": "^2.0.2",
     "papaparse": "^5.5.3",
     "pg": "^8.16.3",

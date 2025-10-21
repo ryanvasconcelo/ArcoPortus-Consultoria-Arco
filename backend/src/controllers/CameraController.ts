@@ -1,12 +1,11 @@
-// src/controllers/CameraController.ts
-
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-// Importações Corrigidas
 import { Prisma, Camera as PrismaCameraType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import fs from 'fs/promises';
 import path from 'path';
+import { logAction } from '../services/audit.service';
+import { LogSeverity } from '@prisma/client';
 
 type CameraData = Partial<PrismaCameraType>;
 
@@ -14,42 +13,31 @@ const UPLOADS_FOLDER = path.resolve(__dirname, '..', '..', 'uploads');
 
 // --- FUNÇÃO AUXILIAR DE PARSING DE TEMPO ---
 function parseRecordingTime(timeString: string | number | null | undefined, headerName: string): number | null {
-    // Se o header já indica horas, trata como horas
     if (headerName.includes('horas')) {
-        if (typeof timeString === 'number' && !isNaN(timeString) && timeString >= 0) {
-            return timeString;
-        }
+        if (typeof timeString === 'number' && !isNaN(timeString) && timeString >= 0) return timeString;
         if (typeof timeString === 'string') {
             const parsedValue = parseFloat(timeString.replace(',', '.'));
-            if (!isNaN(parsedValue) && parsedValue >= 0) { return parsedValue; }
+            if (!isNaN(parsedValue) && parsedValue >= 0) return parsedValue;
         }
         return null;
     }
-    // Se o header indica dias (ou formato misto)
-    if (typeof timeString === 'number' && !isNaN(timeString) && timeString >= 0) {
-        return timeString * 24; // Converte dias (decimais) para horas
-    }
-    if (typeof timeString !== 'string' || !timeString.trim()) {
-        return null;
-    }
+    if (typeof timeString === 'number' && !isNaN(timeString) && timeString >= 0) return timeString * 24;
+    if (typeof timeString !== 'string' || !timeString.trim()) return null;
     let totalHours = 0;
     const cleanedString = timeString.replace(',', '.');
     const dayMatch = cleanedString.match(/([\d.]+)\s*Dia/i);
-    if (dayMatch && dayMatch[1]) {
+    if (dayMatch?.[1]) {
         const days = parseFloat(dayMatch[1]);
-        if (!isNaN(days)) { totalHours += days * 24; }
+        if (!isNaN(days)) totalHours += days * 24;
     }
     const hourMatch = cleanedString.match(/([\d.]+)\s*Hora/i);
-    if (hourMatch && hourMatch[1]) {
+    if (hourMatch?.[1]) {
         const hours = parseFloat(hourMatch[1]);
-        if (!isNaN(hours)) { totalHours += hours; }
+        if (!isNaN(hours)) totalHours += hours;
     }
     if (totalHours === 0) {
         const parsedValue = parseFloat(cleanedString);
-        if (!isNaN(parsedValue) && parsedValue >= 0) {
-            console.warn(`Formato de tempo "${timeString}" não reconhecido, tratando como dias decimais.`);
-            totalHours = parsedValue * 24;
-        }
+        if (!isNaN(parsedValue) && parsedValue >= 0) totalHours = parsedValue * 24;
     }
     return totalHours > 0 ? totalHours : null;
 }
@@ -57,21 +45,17 @@ function parseRecordingTime(timeString: string | number | null | undefined, head
 
 export class CameraController {
 
-    // Método LISTAR (Nome 'listCameras' conforme rota)
     public async listCameras(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição listCameras recebida ---');
         try {
             const { user } = req;
             const requiredPermission = 'VIEW:CFTV';
             if (!user.permissions.includes(requiredPermission)) {
-                console.log(`ListCameras falhou: Permissão '${requiredPermission}' negada.`);
                 return res.status(403).json({ message: 'Acesso negado.' });
             }
             const cameras = await prisma.camera.findMany({
                 where: { companyId: user.company.id },
                 orderBy: { name: 'asc' }
             });
-            console.log(`${cameras.length} câmeras encontradas.`);
             return res.status(200).json(cameras);
         } catch (error) {
             console.error('--- ERRO CRÍTICO em listCameras ---', error);
@@ -79,9 +63,7 @@ export class CameraController {
         }
     }
 
-    // Método SHOW (Nome 'show' conforme rota)
     public async show(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição show camera recebida ---');
         try {
             const { user } = req;
             const { id: cameraId } = req.params;
@@ -93,14 +75,18 @@ export class CameraController {
         } catch (error) { console.error('--- ERRO CRÍTICO em show camera ---', error); return res.status(500).json({ message: 'Erro interno do servidor.' }); }
     }
 
-    // Método CREATE (Nome 'create' conforme rota, Permissão 'CREATE:CFTV')
     public async create(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição create recebida ---');
         try {
             const { user } = req;
             const cameraData: CameraData = req.body;
-            const actionPermission = 'CREATE:DOCUMENTS'; // Permissão correta
-            if (!user.permissions.includes(actionPermission)) { return res.status(403).json({ message: 'Acesso negado.' }); }
+
+            // ✅ REGRA "CHAVE DUPLA" APLICADA
+            const actionPermission = 'CREATE:DOCUMENTS';
+            const viewPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(actionPermission) || !user.permissions.includes(viewPermission)) {
+                return res.status(403).json({ message: 'Acesso negado. Permissão de criação e acesso ao módulo CFTV são necessárias.' });
+            }
+
             if (!cameraData.name) { return res.status(400).json({ message: 'Nome da câmera é obrigatório.' }); }
 
             let ipAddress = cameraData.ipAddress;
@@ -123,29 +109,39 @@ export class CameraController {
                     companyId: user.company.id,
                 }
             });
-            console.log('Câmera criada:', newCamera.id);
+
+            logAction({
+                action: 'CREATE',
+                module: 'CFTV',
+                target: newCamera.name, // <-- MUDANÇA: Alvo é o nome da câmera
+                details: `Câmera "${newCamera.name}" foi criada.`,
+                severity: LogSeverity.MEDIA, // <-- Regra de Negócio: OK
+                user: req.user,
+            });
+
             return res.status(201).json(newCamera);
         } catch (error) {
-            console.error("Erro ao criar câmera:", error);
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 const target = (error.meta as any)?.target;
-                if (target && target.includes('ipAddress')) { return res.status(409).json({ message: "Já existe uma câmera com este endereço IP." }); }
+                if (target?.includes('ipAddress')) { return res.status(409).json({ message: "Já existe uma câmera com este endereço IP." }); }
                 return res.status(409).json({ message: "Falha ao criar: Violação de campo único.", details: target });
             }
             return res.status(500).json({ message: 'Erro interno do servidor.' });
         }
     }
 
-    // Método UPDATE (Nome 'update' conforme rota, Permissão 'EDIT:CFTV')
     public async update(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição update recebida ---');
         try {
             const { user } = req;
             const { id: cameraId } = req.params;
             const cameraData: CameraData = req.body;
 
-            const actionPermission = 'EDIT:DOCUMENTS'; // Permissão correta
-            if (!user.permissions.includes(actionPermission)) { return res.status(403).json({ message: 'Acesso negado.' }); }
+            // ✅ REGRA "CHAVE DUPLA" APLICADA
+            const actionPermission = 'EDIT:DOCUMENTS';
+            const viewPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(actionPermission) || !user.permissions.includes(viewPermission)) {
+                return res.status(403).json({ message: 'Acesso negado. Permissão de edição e acesso ao módulo CFTV são necessárias.' });
+            }
 
             const cameraToUpdate = await prisma.camera.findFirst({ where: { id: cameraId, companyId: user.company.id } });
             if (!cameraToUpdate) { return res.status(404).json({ message: 'Câmera não encontrada.' }); }
@@ -178,14 +174,20 @@ export class CameraController {
                     recordingHours: recordingHours, deactivatedAt: deactivatedAt !== undefined ? deactivatedAt : undefined,
                 },
             });
-            console.log('Câmera atualizada:', updatedCamera.id);
+
+            logAction({
+                action: 'UPDATE',
+                module: 'CFTV',
+                target: updatedCamera.name, // <-- MUDANÇA: Alvo é o nome da câmera
+                details: `Câmera "${updatedCamera.name}" foi atualizada.`, // <-- MUDANÇA: ID Removido
+                severity: LogSeverity.ALTA, // <-- MUDANÇA: Edição é ALTA
+                user: req.user,
+            });
+
             return res.status(200).json(updatedCamera);
         } catch (error) {
-            console.error("Erro ao atualizar câmera:", error);
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                const target = (error.meta as any)?.target;
-                if (target && target.includes('ipAddress')) { return res.status(409).json({ message: "Já existe outra câmera com este endereço IP." }); }
-                return res.status(409).json({ message: "Falha ao atualizar: Violação de campo único.", details: target });
+                return res.status(409).json({ message: "Já existe outra câmera com este endereço IP." });
             }
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
                 return res.status(404).json({ message: 'Câmera não encontrada para atualização.' });
@@ -194,40 +196,51 @@ export class CameraController {
         }
     }
 
-    // Método DELETE (Nome 'delete' conforme rota, Permissão 'DELETE:CFTV')
     public async delete(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição delete recebida ---');
         try {
             const { user } = req;
             const { id: cameraId } = req.params;
 
-            const actionPermission = 'DELETE:DOCUMENTS'; // Permissão correta
-            if (!user.permissions.includes(actionPermission)) { return res.status(403).json({ message: 'Acesso negado.' }); }
+            // ✅ REGRA "CHAVE DUPLA" APLICADA
+            const actionPermission = 'DELETE:DOCUMENTS';
+            const viewPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(actionPermission) || !user.permissions.includes(viewPermission)) {
+                return res.status(403).json({ message: 'Acesso negado. Permissão de exclusão e acesso ao módulo CFTV são necessárias.' });
+            }
 
-            const cameraExists = await prisma.camera.findFirst({ where: { id: cameraId, companyId: user.company.id } });
-            if (!cameraExists) { return res.status(404).json({ message: 'Câmera não encontrada.' }); }
+            const cameraToDelete = await prisma.camera.findFirst({ where: { id: cameraId, companyId: user.company.id } });
+            if (!cameraToDelete) { return res.status(404).json({ message: 'Câmera não encontrada.' }); }
 
             await prisma.camera.delete({ where: { id: cameraId } });
-            console.log('Câmera deletada:', cameraId);
+
+            logAction({
+                action: 'DELETE',
+                module: 'CFTV',
+                target: cameraToDelete.name, // <-- MUDANÇA: Alvo é o nome da câmera
+                details: `Câmera "${cameraToDelete.name}" foi excluída.`, // <-- MUDANÇA: ID Removido
+                severity: LogSeverity.ALTA, // <-- Regra de Negócio: OK
+                user: req.user,
+            });
+
             return res.status(204).send();
         } catch (error) {
-            console.error('--- ERRO CRÍTICO em delete ---', error);
             return res.status(500).json({ message: 'Erro interno do servidor ao excluir câmera.' });
         }
     }
 
-    // Método IMPORT (CORRIGIDO: usa findFirst + create/update ao invés de upsert)
     public async importFromXLSX(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição importFromXLSX recebida ---');
         const file = req.file;
-        const cleanupFile = async () => {
-            if (file?.path) { await fs.unlink(file.path).catch(err => console.error("Falha ao limpar:", file.path, err)); }
-        };
+        const cleanupFile = async () => { if (file?.path) { await fs.unlink(file.path).catch(err => console.error("Falha ao limpar:", file.path, err)); } };
 
         try {
             const { user } = req;
             if (!file || !file.path) { return res.status(400).json({ message: 'Arquivo não enviado.' }); }
-            if (!user.permissions.includes('CREATE:DOCUMENTS')) { await cleanupFile(); return res.status(403).json({ message: 'Acesso negado.' }); }
+
+            // ✅ REGRA "CHAVE DUPLA" APLICADA
+            if (!user.permissions.includes('CREATE:DOCUMENTS') || !user.permissions.includes('VIEW:CFTV')) {
+                await cleanupFile();
+                return res.status(403).json({ message: 'Acesso negado. Permissão de criação e acesso ao módulo CFTV são necessárias.' });
+            }
 
             const companyId = user.company.id;
             const workbook = XLSX.readFile(file.path);
@@ -238,14 +251,7 @@ export class CameraController {
             if (data.length < 2) { await cleanupFile(); return res.status(400).json({ message: 'Planilha vazia.' }); }
 
             const headers = data[0] as string[];
-            const headerMap: { [key: string]: string } = {
-                'nº câmera': 'name', 'local de instalação': 'location', 'em funcionamento ?': 'isActive',
-                'ip': 'ipAddress', 'modelo': 'model', 'fabricante': 'fabricante',
-                'unidade de negócio': 'businessUnit', 'tipo': 'type', 'área externa / interna': 'area',
-                'possui analítico?': 'hasAnalytics', 'dias gravados': 'recordingTime',
-                'dias de gravação': 'recordingTime', 'horas de gravação': 'recordingTime'
-            };
-
+            const headerMap: { [key: string]: string } = { 'nº câmera': 'name', 'local de instalação': 'location', 'em funcionamento ?': 'isActive', 'ip': 'ipAddress', 'modelo': 'model', 'fabricante': 'fabricante', 'unidade de negócio': 'businessUnit', 'tipo': 'type', 'área externa / interna': 'area', 'possui analítico?': 'hasAnalytics', 'dias gravados': 'recordingTime', 'dias de gravação': 'recordingTime', 'horas de gravação': 'recordingTime' };
             const indices: { [key: string]: number } = {};
             let nameIndex = -1;
             let timeHeaderIndex = -1;
@@ -253,15 +259,10 @@ export class CameraController {
             headers.forEach((header, index) => {
                 const norm = String(header || '').toLowerCase().trim();
                 const field = headerMap[norm];
-                if (field) {
-                    indices[field] = index;
-                    if (field === 'name') nameIndex = index;
-                    if (field === 'recordingTime') timeHeaderIndex = index;
-                }
+                if (field) { indices[field] = index; if (field === 'name') nameIndex = index; if (field === 'recordingTime') timeHeaderIndex = index; }
             });
             if (nameIndex === -1) { await cleanupFile(); return res.status(400).json({ message: 'Coluna "Nº Câmera" não encontrada.' }); }
 
-            console.log(`Lidos ${data.length - 1} registros.`);
             const results = { created: [] as string[], updated: [] as string[], failed: [] as { name: string; row: number; error: string }[] };
             const timeHeaderName = timeHeaderIndex !== -1 ? String(headers[timeHeaderIndex]).toLowerCase() : "";
 
@@ -274,9 +275,6 @@ export class CameraController {
                 try {
                     const timeFromSheet = indices.recordingTime !== undefined ? row[indices.recordingTime] : null;
                     const recordingHoursValue = parseRecordingTime(timeFromSheet, timeHeaderName);
-
-                    console.log(`Linha ${rowNumber}: "${cameraName}", Tempo Lido: "${timeFromSheet}", Cabeçalho: "${timeHeaderName}", Horas Calculadas: ${recordingHoursValue}`);
-
                     const parseBoolean = (value: any): boolean => ['sim', 'yes', 'true', '1'].includes(String(value || '').trim().toLowerCase());
                     const isActiveValue = indices.isActive !== undefined ? !(['não', 'nao', 'no', 'false', '0'].includes(String(row[indices.isActive]).trim().toLowerCase())) : true;
                     let ipAddressValue = indices.ipAddress !== undefined ? (row[indices.ipAddress]?.toString()?.trim() || null) : null;
@@ -295,59 +293,37 @@ export class CameraController {
                         isActive: isActiveValue,
                     };
 
-                    // --- CORRIGIDO: Buscar câmera existente manualmente ---
                     const existingCamera = await prisma.camera.findFirst({
-                        where: {
-                            companyId: companyId,
-                            name: cameraName,
-                            location: cameraDataForDb.location  // ← Adicione esta linha
-                        }
+                        where: { companyId: companyId, name: cameraName, location: cameraDataForDb.location }
                     });
 
-                    let result;
                     if (existingCamera) {
-                        // Atualizar câmera existente
-                        result = await prisma.camera.update({
-                            where: { id: existingCamera.id },
-                            data: cameraDataForDb
-                        });
+                        await prisma.camera.update({ where: { id: existingCamera.id }, data: cameraDataForDb });
                         results.updated.push(cameraName);
                     } else {
-                        // Criar nova câmera
-                        result = await prisma.camera.create({
-                            data: {
-                                ...cameraDataForDb,
-                                name: cameraName,
-                                companyId: companyId
-                            }
-                        });
+                        await prisma.camera.create({ data: { ...cameraDataForDb, name: cameraName, companyId: companyId } });
                         results.created.push(cameraName);
                     }
-
                 } catch (dbError: any) {
-                    console.error(`Erro linha ${rowNumber} (${cameraName}):`, dbError);
                     let errorMessage = 'Erro desconhecido.';
                     if (dbError instanceof Prisma.PrismaClientKnownRequestError) {
-                        if (dbError.code === 'P2002') {
-                            const target = (dbError.meta as any)?.target;
-                            if (target && target.includes('ipAddress')) {
-                                errorMessage = `IP duplicado: ${ipAddressValue}`;
-                            } else {
-                                errorMessage = `Conflito de dados únicos. ${dbError.meta?.target}`;
-                            }
-                        } else {
-                            errorMessage = `Erro Prisma ${dbError.code}`;
-                        }
-                    }
-                    else if (dbError instanceof Prisma.PrismaClientValidationError) {
-                        errorMessage = 'Erro de validação.';
+                        if (dbError.code === 'P2002') { errorMessage = `Conflito de dados únicos. ${dbError.meta?.target}`; }
+                        else { errorMessage = `Erro Prisma ${dbError.code}`; }
                     }
                     results.failed.push({ name: cameraName, row: rowNumber, error: errorMessage });
                 }
-            } // Fim for
+            }
 
-            console.log('Processamento concluído.', results);
             await cleanupFile();
+            logAction({
+                action: 'IMPORT',
+                module: 'CFTV',
+                target: file.originalname, // <-- MUDANÇA: Alvo é o nome do arquivo
+                details: `Importação de câmeras: ${results.created.length} criadas, ${results.updated.length} atualizadas, ${results.failed.length} falharam.`,
+                severity: LogSeverity.MEDIA, // <-- Regra de Negócio: Criação é MEDIA
+                user: req.user,
+            });
+
             let message = `${results.created.length} criadas.`;
             if (results.updated.length > 0) message += ` ${results.updated.length} atualizadas.`;
             if (results.failed.length > 0) message += ` ${results.failed.length} falharam.`;
@@ -355,19 +331,19 @@ export class CameraController {
             return res.status(status).json({ message, details: results });
 
         } catch (error: any) {
-            console.error('--- ERRO CRÍTICO GERAL import ---', error);
             await cleanupFile();
-            if (error instanceof Error && (error.message.includes('Sheet') || error.message.includes('File reading error'))) {
-                return res.status(400).json({ message: 'Erro ao ler planilha.' });
-            }
+            logAction({
+                action: 'IMPORT_FAIL',
+                module: 'CFTV',
+                details: `Falha crítica na importação de câmeras. Erro: ${error.message}`,
+                severity: LogSeverity.ALTA,
+                user: req.user,
+            });
             return res.status(500).json({ message: 'Erro interno inesperado.' });
         }
     }
 
-
-    // Método EXPORT (Com select explícito e campo recordingHours)
     public async exportToXLSX(req: Request, res: Response): Promise<void> {
-        console.log('--- Requisição exportToXLSX recebida ---');
         try {
             const { user } = req;
             const requiredPermission = 'VIEW:CFTV';
@@ -376,24 +352,13 @@ export class CameraController {
             const cameras = await prisma.camera.findMany({
                 where: { companyId: user.company.id },
                 orderBy: { name: 'asc' },
-                select: {
-                    name: true, location: true, isActive: true, ipAddress: true, model: true,
-                    fabricante: true, businessUnit: true, type: true, area: true,
-                    hasAnalytics: true, recordingHours: true, deactivatedAt: true
-                }
+                select: { name: true, location: true, isActive: true, ipAddress: true, model: true, fabricante: true, businessUnit: true, type: true, area: true, hasAnalytics: true, recordingHours: true, deactivatedAt: true }
             });
 
             const dataToExport = cameras.map((cam) => ({
-                'Nº Câmera': cam.name,
-                'Local de Instalação': cam.location,
-                'Em Funcionamento ?': cam.isActive ? 'Sim' : 'Não',
-                'IP': cam.ipAddress,
-                'Modelo': cam.model,
-                'Fabricante': cam.fabricante,
-                'Unidade de Negócio': cam.businessUnit,
-                'Tipo': cam.type,
-                'Área Externa / Interna': cam.area,
-                'POSSUI ANÁLITICO?': cam.hasAnalytics ? 'Sim' : 'Não',
+                'Nº Câmera': cam.name, 'Local de Instalação': cam.location, 'Em Funcionamento ?': cam.isActive ? 'Sim' : 'Não',
+                'IP': cam.ipAddress, 'Modelo': cam.model, 'Fabricante': cam.fabricante, 'Unidade de Negócio': cam.businessUnit,
+                'Tipo': cam.type, 'Área Externa / Interna': cam.area, 'POSSUI ANÁLITICO?': cam.hasAnalytics ? 'Sim' : 'Não',
                 'Horas de Gravação': cam.recordingHours !== null && cam.recordingHours !== undefined ? cam.recordingHours.toFixed(2) : '',
                 'Data Desativação': cam.deactivatedAt ? new Date(cam.deactivatedAt).toLocaleDateString('pt-BR') : '',
             }));
@@ -406,51 +371,52 @@ export class CameraController {
             res.setHeader('Content-Disposition', 'attachment; filename="export_cameras.xlsx"');
             res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.send(buffer);
-            console.log('Exportação concluída.');
 
+            logAction({
+                action: 'EXPORT',
+                module: 'CFTV',
+                target: 'Exportação XLSX', // <-- MUDANÇA: Alvo genérico
+                details: `Exportou a lista de ${cameras.length} câmeras para XLSX.`,
+                severity: LogSeverity.BAIXA, // <-- Regra de Negócio: Download é BAIXA
+                user: req.user,
+            });
         } catch (error) {
             console.error("Erro ao exportar para XLSX:", error);
-            if (!res.headersSent) {
-                res.status(500).json({ message: 'Erro interno ao gerar o arquivo.' });
-                return;
-            }
+            if (!res.headersSent) { res.status(500).json({ message: 'Erro interno ao gerar o arquivo.' }); }
         }
     }
 
-    // --- NOSSO ÚLTIMO ATO: DELETAR TODAS AS CÂMERAS ---
     public async deleteAllCameras(req: Request, res: Response): Promise<Response> {
-        console.log('--- Requisição deleteAllCameras recebida ---');
         try {
             const { user } = req;
 
-            // --- PERMISSÃO SUPER CRÍTICA ---
-            // Garante que o usuário tem a permissão de delete para esta área
-            const requiredPermission = 'DELETE:CFTV';
-            if (!user.permissions.includes(requiredPermission)) {
-                console.log(`DeleteAll falhou: Permissão '${requiredPermission}' negada.`);
-                return res.status(403).json({ message: 'Acesso negado. Permissão insuficiente para exclusão em massa.' });
+            // ✅ REGRA "CHAVE DUPLA" ESPECIAL PARA AÇÃO CRÍTICA
+            const actionPermission = 'DELETE:CFTV'; // Permissão específica e perigosa
+            const viewPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(actionPermission) || !user.permissions.includes(viewPermission)) {
+                return res.status(403).json({ message: 'Acesso negado. Permissão especial para exclusão em massa é necessária.' });
             }
 
-            // AÇÃO DE DESTRUIÇÃO EM MASSA - Focada apenas na companyId do usuário
-            // Isso garante que um usuário da Empresa A NUNCA delete dados da Empresa B
-            console.log(`Excluindo todas as câmeras da companyId: ${user.company.id}`);
             const deleteResult = await prisma.camera.deleteMany({
-                where: {
-                    companyId: user.company.id,
-                }
+                where: { companyId: user.company.id }
             });
 
-            console.log(`${deleteResult.count} câmeras foram deletadas para a companyId: ${user.company.id}`);
+            logAction({
+                action: 'DELETE_ALL',
+                module: 'CFTV',
+                target: 'Todas as Câmeras', // <-- MUDANÇA: Alvo genérico
+                details: `Exclusão em massa de ${deleteResult.count} câmeras executada.`,
+                severity: LogSeverity.ALTA, // <-- Regra de Negócio: OK
+                user: req.user,
+            });
 
-            // Retorna o número de câmeras deletadas
             return res.status(200).json({
                 message: `${deleteResult.count} câmeras foram deletadas com sucesso.`,
                 count: deleteResult.count
             });
-
         } catch (error) {
             console.error('--- ERRO CRÍTICO em deleteAllCameras ---', error);
             return res.status(500).json({ message: 'Erro interno do servidor ao excluir as câmeras.' });
         }
     }
-} // Fim da classe
+}

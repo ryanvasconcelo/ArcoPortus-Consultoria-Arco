@@ -25,6 +25,8 @@
     "framer-motion": "^12.23.22",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.544.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",

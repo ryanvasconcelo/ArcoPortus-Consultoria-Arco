@@ -82,3 +82,38 @@ model Camera {
   @@unique([companyId, ipAddress]) // IP é único por empresa
   @@map("cameras")
 }
+
+// --- MÓDULO DE AUDITORIA ---
+
+// Enum para a regra de Severidade
+enum LogSeverity {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+model AuditLog {
+  id        String    @id @default(uuid())
+  action    String    // Ex: "LOGIN", "UPLOAD", "DELETE_ALL"
+  module    String    // Ex: "AUTH", "FILES", "CFTV"
+  target    String?   // Ex: "legislacao", "camera_x", "Arlison"
+  details   String    @db.Text 
+  severity  LogSeverity
+  // ip        String?   // Removido conforme regra
+  userId    String    
+  userName  String    
+  userRole  String    
+  
+  // --- MUDANÇA 1: ADICIONADO ---
+  // Para exibir o nome da empresa na coluna "Alvo"
+  companyName String? 
+
+  // REGRA MESTRA: Multi-Tenancy
+  companyId String    @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
+  @@map("audit_logs")
+}

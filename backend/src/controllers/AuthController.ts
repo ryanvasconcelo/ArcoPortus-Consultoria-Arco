@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import { logAction } from '../services/audit.service';
+import { LogSeverity } from '@prisma/client';
 
 export class AuthController {
     public async login(req: Request, res: Response): Promise<Response> {
@@ -11,44 +13,41 @@ export class AuthController {
         }
 
         try {
-
             const apiKey = process.env.INTERNAL_API_KEY;
-
-            console.log('🔍 [DEBUG] CGA URL:', process.env.CGA_INTERNAL_API_URL);
-            console.log('🔍 [DEBUG] API Key:', apiKey?.substring(0, 20) + '...');
-            console.log('🔍 [DEBUG] Full URL:', `${process.env.CGA_INTERNAL_API_URL}/internal/auth/portus-login`);
-
             const cgaApiResponse = await axios.post(
                 `${process.env.CGA_INTERNAL_API_URL}/internal/auth/portus-login`,
                 { email, password },
-                {
-                    headers: {
-                        // Usamos a variável 'apiKey' que acabamos de logar
-                        'x-internal-api-key': apiKey,
-                    },
-                }
+                { headers: { 'x-internal-api-key': apiKey } }
             );
 
-            // 2. Se a chamada foi bem-sucedida, o CGA nos retornou os dados do usuário
             const userData = cgaApiResponse.data;
 
-            // 3. Geramos um JWT *do Arco Portus* com esses dados
+            // ✅ --- CORREÇÃO CRÍTICA ---
+            // Adicionamos 'name' ao payload do token.
             const token = jwt.sign(
                 {
-                    // Colocamos os dados recebidos dentro do payload do nosso token
                     userId: userData.userId,
+                    name: userData.name, // <--- ESTA LINHA É A CORREÇÃO
                     company: userData.company,
                     role: userData.role,
                     permissions: userData.permissions,
                 },
-                process.env.ARCO_PORTUS_JWT_SECRET as string, // Chave secreta do Portus
+                process.env.ARCO_PORTUS_JWT_SECRET as string,
                 {
-                    subject: userData.userId, // O 'sub' do token é o ID do usuário
-                    expiresIn: '1d', // Token expira em 1 dia
+                    subject: userData.userId,
+                    expiresIn: '30m',
                 }
             );
 
-            // 4. Retornamos o token e os dados básicos para o frontend
+            logAction({
+                action: 'LOGIN',
+                module: 'AUTH',
+                target: email, // <-- MUDANÇA: Alvo é o email
+                details: `Login bem-sucedido para o usuário ${email}.`,
+                severity: LogSeverity.BAIXA, // <-- Regra de Negócio: OK
+                user: userData,
+            });
+
             return res.status(200).json({
                 token,
                 user: {
@@ -60,31 +59,50 @@ export class AuthController {
             });
 
         } catch (error) {
-            // Se o axios der erro (ex: 401, 403, 500 do CGA), capturamos aqui
+            logAction({
+                action: 'LOGIN_ATTEMPT',
+                module: 'AUTH',
+                target: email, // <-- MUDANÇA: Alvo é o email
+                details: `Tentativa de login falha para o email ${email}.`,
+                severity: LogSeverity.MEDIA, // Tentativa falha é MEDIA
+                user: {
+                    userId: 'N/A', name: `Tentativa (${email})`,
+                    company: { id: 'N/A', name: 'N/A' },
+                    role: 'N/A', permissions: [],
+                },
+            });
+
             if (axios.isAxiosError(error) && error.response) {
-                // Repassamos o status e a mensagem de erro do CGA para o frontend
                 return res.status(error.response.status).json(error.response.data);
             }
 
-            // Se for outro tipo de erro (ex: CGA fora do ar)
             console.error('Login error:', error);
             return res.status(500).json({ message: 'Could not connect to authentication service.' });
         }
     }
 
     public async forceChangePassword(req: Request, res: Response): Promise<Response> {
-        const { userId } = req.user; // O ID do usuário vem do token JWT (graças ao ensureAuthenticated)
+        const { userId, name } = req.user;
         const { newPassword } = req.body;
 
         try {
-            // ✅ Pede para o CGA fazer o trabalho sujo
             await axios.patch(
                 `${process.env.CGA_INTERNAL_API_URL}/internal/users/force-password-change`,
                 { userId, newPassword },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
 
-            return res.status(204).send(); // 204 No Content = sucesso sem corpo de resposta
+            // LOG DE ALTERAÇÃO DE SENHA
+            logAction({
+                action: 'FORCE_PASSWORD_CHANGE',
+                module: 'AUTH',
+                target: name, // <-- MUDANÇA: Alvo é o nome do usuário
+                details: `Usuário "${name}" alterou a senha (forçado no primeiro login).`,
+                severity: LogSeverity.ALTA, // <-- MUDANÇA: Edição é ALTA
+                user: req.user,
+            });
+
+            return res.status(204).send();
         } catch (error) {
             console.error("Erro ao forçar troca de senha:", error);
             return res.status(500).json({ message: "Erro ao se comunicar com o serviço de autenticação." });
@@ -98,9 +116,20 @@ export class AuthController {
                 { email: req.body.email },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
+
+            logAction({
+                action: 'FORGOT_PASSWORD',
+                module: 'AUTH',
+                target: req.body.email, // <-- MUDANÇA: Alvo é o email
+                details: `Solicitação de redefinição de senha para o email ${req.body.email}.`,
+                severity: LogSeverity.BAIXA, // É uma solicitação, não uma mudança
+                user: {
+                    userId: 'System', name: 'System', company: { id: 'N/A', name: 'N/A' },
+                    role: 'System', permissions: []
+                }
+            });
             return res.status(204).send();
         } catch (error) {
-            // Retornamos 204 mesmo em caso de erro para não vazar informações
             console.error('[PORTUS] Erro ao solicitar redefinição:', error);
             return res.status(204).send();
         }
@@ -113,6 +142,18 @@ export class AuthController {
                 { token: req.body.token, newPassword: req.body.newPassword },
                 { headers: { 'x-internal-api-key': process.env.INTERNAL_API_KEY } }
             );
+
+            logAction({
+                action: 'RESET_PASSWORD',
+                module: 'AUTH',
+                target: 'Redefinição via Token', // <-- MUDANÇA: Alvo genérico
+                details: `Senha redefinida com sucesso via token.`,
+                severity: LogSeverity.ALTA, // <-- MUDANÇA: Edição é ALTA
+                user: {
+                    userId: 'System', name: 'System', company: { id: 'N/A', name: 'N/A' },
+                    role: 'System', permissions: []
+                }
+            });
             return res.status(204).send();
         } catch (error: any) {
             const status = error.response?.status || 500;
@@ -121,3 +162,4 @@ export class AuthController {
         }
     }
 }
+
