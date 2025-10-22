@@ -112,6 +112,7 @@ services:
       # Volume /app/node_modules REMOVIDO
     environment:
       VITE_API_BASE_URL: https://arcoportus.pktech.ai/api
+      VITE_INTERNAL_API_KEY: NDQBFansjdnqfbquwb1237asud1ngjnJAFWJNFjnaisf9283nfjNFnfjqnfbsu91293JNDjNDQWBFUBWjqwufbasjnjncw98124012.1e209eqsjcanjn
     # Command com workaround para Rollup/Alpine
     command:
       - sh
