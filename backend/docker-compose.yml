@@ -4,6 +4,7 @@ services:
   # --- Serviço Banco de Dados PostgreSQL ---
   arcoportus_db:
     image: postgres:15-alpine
+    container_name: arcoportus_postgres_db # Adicionado
     environment:
       POSTGRES_DB: arcoportus_db
       POSTGRES_USER_FILE: /run/secrets/arcoportus_db_user
@@ -29,13 +30,15 @@ services:
   # --- Serviço Backend (Arco Portus API) ---
   backend:
     image: node:20-alpine
+    container_name: arcoportus_backend_api # Adicionado
     working_dir: /app
     volumes:
       - /opt/arcoportus/backend:/app
+      # Volume /app/node_modules REMOVIDO
     environment:
       DB_NAME: arcoportus_db
       CORS_ORIGIN: https://arcoportus.pktech.ai
-      NODE_ENV: production
+      NODE_ENV: production # Mantém production para a app
       PORT: 3335
       CGA_INTERNAL_API_URL: http://backend:3333/api
       INTERNAL_API_KEY: NDQBFansjdnqfbquwb1237asud1ngjnJAFWJNFjnaisf9283nfjNFnfjqnfbsu91293JNDjNDQWBFUBWjqwufbasjnjncw98124012.1e209eqsjcanjn
@@ -43,15 +46,13 @@ services:
       - arcoportus_db_user
       - arcoportus_db_password
       - arcoportus_jwt_secret
+    # --- AJUSTE NO COMMAND (Instala DevDependencies) ---
     command:
       - sh
       - -c
       - |
         echo 'Aguardando banco de dados...'
-        until nc -z arcoportus_db 5432; do
-          echo 'Banco ainda não está pronto...'
-          sleep 2
-        done
+        until nc -z arcoportus_db 5432; do echo 'Banco ainda não está pronto...' && sleep 2; done
         echo 'Banco está pronto!'
         
         DB_USER_VAL=$$(cat /run/secrets/arcoportus_db_user)
@@ -59,9 +60,10 @@ services:
         export DATABASE_URL="postgresql://$${DB_USER_VAL}:$${DB_PASSWORD_VAL}@arcoportus_db:5432/$${DB_NAME}?schema=public"
         export ARCO_PORTUS_JWT_SECRET=$$(cat /run/secrets/arcoportus_jwt_secret)
         
-        echo 'Limpando artefatos e instalando dependências...'
-        rm -rf node_modules dist
-        npm install
+        echo 'Limpando artefatos e instalando TODAS dependências...'
+        rm -rf node_modules dist package-lock.json # Limpa tudo
+        # Força a instalação de TODAS as dependências (incluindo dev)
+        npm install --include=dev 
         
         echo 'Executando migrations...'
         npx prisma migrate deploy
@@ -70,73 +72,91 @@ services:
         npx prisma generate
         
         echo 'Compilando TypeScript...'
-        npm run build
+        npm run build # Deve funcionar agora
         
         echo 'Iniciando aplicação (Produção)...'
         npm run start -- --host 0.0.0.0
+    # --- FIM DO AJUSTE ---
     networks:
       - ProjecontNet
     depends_on:
-      - arcoportus_db
+      - arcoportus_db # Lista simples
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+      # --- AJUSTE NAS LABELS (Adiciona Prioridade) ---
       labels:
         traefik.enable: "true"
+        # Roteador HTTPS (Prioridade ALTA)
         traefik.http.routers.arcoportus-backend.rule: "Host(`arcoportus.pktech.ai`) && PathPrefix(`/api`)"
         traefik.http.routers.arcoportus-backend.entrypoints: "websecure"
         traefik.http.routers.arcoportus-backend.tls.certresolver: "letsencryptresolver"
         traefik.http.routers.arcoportus-backend.middlewares: "stripprefix-api@docker"
         traefik.http.services.arcoportus-backend.loadbalancer.server.port: "3335"
         traefik.docker.network: "ProjecontNet"
+        traefik.http.routers.arcoportus-backend.priority: "100" # <-- PRIORIDADE ALTA
+
+        # Roteador HTTP (Redirecionamento)
         traefik.http.routers.arcoportus-backend-http.rule: "Host(`arcoportus.pktech.ai`) && PathPrefix(`/api`)"
         traefik.http.routers.arcoportus-backend-http.entrypoints: "web"
         traefik.http.routers.arcoportus-backend-http.middlewares: "redirect-to-https@docker"
+        # Definição do Middleware StripPrefix
         traefik.http.middlewares.stripprefix-api.stripprefix.prefixes: "/api"
+      # --- FIM DO AJUSTE ---
 
   # --- Serviço Frontend (Arco Portus UI) ---
   frontend:
     image: node:20-alpine
+    container_name: arcoportus_frontend_ui # Adicionado
     working_dir: /app
     volumes:
       - /opt/arcoportus/frontend:/app
+      # Volume /app/node_modules REMOVIDO
     environment:
       VITE_API_BASE_URL: https://arcoportus.pktech.ai/api
+    # Command com workaround para Rollup/Alpine
     command:
       - sh
       - -c
       - |
         echo 'Limpando artefatos e instalando dependências do frontend...'
-        rm -rf node_modules dist
-        
+        rm -rf node_modules dist package-lock.json # Limpa tudo
+
         echo 'Instalando dependências (com workaround para Alpine)...'
         npm install --no-optional
         npm install @rollup/rollup-linux-x64-musl --save-optional
-        
+
         echo 'Iniciando build e servidor de preview (Frontend)...'
-        npm run build
+        npm run build # Deve funcionar agora
         npm run preview -- --host 0.0.0.0 --port 5174
     networks:
       - ProjecontNet
     depends_on:
-      - backend
+      - backend # Lista simples
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+      # --- AJUSTE NAS LABELS (Adiciona Prioridade) ---
       labels:
         traefik.enable: "true"
+        # Roteador HTTPS (Prioridade BAIXA)
         traefik.http.routers.arcoportus-frontend.rule: "Host(`arcoportus.pktech.ai`)"
         traefik.http.routers.arcoportus-frontend.entrypoints: "websecure"
         traefik.http.routers.arcoportus-frontend.tls.certresolver: "letsencryptresolver"
         traefik.http.services.arcoportus-frontend.loadbalancer.server.port: "5174"
         traefik.docker.network: "ProjecontNet"
+        traefik.http.routers.arcoportus-frontend.priority: "50" # <-- PRIORIDADE BAIXA
+
+        # Roteador HTTP (Redirecionamento)
         traefik.http.routers.arcoportus-frontend-http.rule: "Host(`arcoportus.pktech.ai`)"
         traefik.http.routers.arcoportus-frontend-http.entrypoints: "web"
         traefik.http.routers.arcoportus-frontend-http.middlewares: "redirect-to-https@docker"
+        # Definição do Middleware RedirectScheme (se não for global)
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: "https"
         traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
+      # --- FIM DO AJUSTE ---
 
 # --- Recursos Externos ---
 volumes:
