@@ -2,7 +2,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://arcoportus.pktech.ai' // <-- Correto! Apenas o endereço do servidor.
+  baseURL: 'https://arcoportus.pktech.ai',
+  headers: {
+    'x-internal-api-key': import.meta.env.VITE_INTERNAL_API_KEY || ''
+  }
 });
 
 export default api;

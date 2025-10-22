@@ -52,7 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     async function signIn({ email, password }: SignInCredentials) {
-        const response = await api.post('/api/auth/login', { email, password });
+        const response = await api.post('/api/internal/auth/portus-login', { email, password });
         const { token: apiToken, user: apiUser } = response.data;
 
         localStorage.setItem('@ArcoPortus:user', JSON.stringify(apiUser));
