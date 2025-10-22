@@ -55,7 +55,19 @@ export class FileController {
                 });
             } else {
                 savedFile = await prisma.file.create({
-                    data: { companyId: user.company.id, category, subcategory: subcategory || null, item: item || null, name: finalName, description, path: pathValue, size, mimetype, uploadedById: user.userId, uploadedByName: user.name }
+                    data: {
+                        companyId: user.company.id,
+                        category,
+                        subcategory: subcategory || null,
+                        item: item || null,
+                        name: finalName,
+                        description,
+                        path: pathValue,
+                        size,
+                        mimetype,
+                        uploadedById: user.userId,
+                        uploadedByName: user.name
+                    }
                 });
                 logAction({
                     action: 'UPLOAD',
