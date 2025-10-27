@@ -27,7 +27,7 @@ export class AuthController {
             const token = jwt.sign(
                 {
                     userId: userData.userId,
-                    name: userData.name, // <--- ESTA LINHA É A CORREÇÃO
+                    name: userData.name || userData.email || 'Usuário (Nome Faltando)', // <-- Fallback
                     company: userData.company,
                     role: userData.role,
                     permissions: userData.permissions,
@@ -51,7 +51,7 @@ export class AuthController {
             return res.status(200).json({
                 token,
                 user: {
-                    name: userData.name,
+                    name: userData.name || userData.email || 'Usuário (Nome Faltando)', // <-- Fallback
                     email: userData.email,
                     role: userData.role,
                     passwordResetRequired: userData.passwordResetRequired,
