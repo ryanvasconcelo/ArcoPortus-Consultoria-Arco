@@ -20,17 +20,15 @@ export class AuthController {
                 { headers: { 'x-internal-api-key': apiKey } }
             );
 
-            // --- INÍCIO DA CORREÇÃO ---
-            // O CGA retorna { token, user: { ... } }
-            // Precisamos extrair o objeto 'user'
-            const cgaResponse = cgaApiResponse.data;
-            const userData = cgaResponse.user; // <--- MUDANÇA 1
+            // --- CORREÇÃO DE LÓGICA ---
+            // A resposta do CGA É o objeto do usuário.
+            const userData = cgaApiResponse.data;
+            // (Não precisamos de 'cgaResponse.user')
             // --- FIM DA CORREÇÃO ---
 
 
-            // --- INÍCIO DA VERIFICAÇÃO DE SERVIÇO ---
-            // Agora 'userData' é o objeto correto, e checamos 'services'.
-            if (!userData.services || !userData.services.includes('Arco Portus')) { // <--- MUDANÇA 2
+            // --- VERIFICAÇÃO DE SERVIÇO ---
+            if (!userData.services || !userData.services.includes('Arco Portus')) {
 
                 logAction({
                     action: 'LOGIN_UNAUTHORIZED_SERVICE',
@@ -46,11 +44,13 @@ export class AuthController {
                         permissions: [],
                     },
                 });
+
+                // Retorna 403 Forbidden (Proibido)
                 return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
             }
+            // --- FIM DA VERIFICAÇÃO ---
 
-            // O resto do seu código já usa a variável 'userData' corretamente.
-            // O Arco Portus gera seu próprio token, ignorando o 'cgaResponse.token', o que está OK.
+            // Se passou, geramos o token
             const token = jwt.sign(
                 {
                     userId: userData.userId,
@@ -72,7 +72,7 @@ export class AuthController {
                 target: email,
                 details: `Login bem-sucedido para o usuário ${email}.`,
                 severity: LogSeverity.BAIXA,
-                user: userData, // 'userData' agora é o objeto de usuário correto
+                user: userData,
             });
 
             return res.status(200).json({
@@ -86,7 +86,7 @@ export class AuthController {
             });
 
         } catch (error) {
-            // ... (seu 'catch' continua igual)
+            // (O bloco catch continua o mesmo...)
             logAction({
                 action: 'LOGIN_ATTEMPT',
                 module: 'AUTH',
@@ -101,11 +101,14 @@ export class AuthController {
             });
 
             if (axios.isAxiosError(error) && error.response) {
+                // Se o CGA nos deu um 401 (senha errada), repasse.
                 return res.status(error.response.status).json(error.response.data);
             }
 
+            // Se o erro foi o nosso TypeError de 'userData' (agora corrigido),
+            // ou outro erro interno.
             console.error('Login error:', error);
-            return res.status(500).json({ message: 'Could not connect to authentication service.' });
+            return res.status(500).json({ message: 'Internal server error.' });
         }
     }
 
