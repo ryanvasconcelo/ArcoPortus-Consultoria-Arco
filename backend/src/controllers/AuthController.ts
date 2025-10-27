@@ -22,6 +22,26 @@ export class AuthController {
 
             const userData = cgaApiResponse.data;
 
+            // --- INÍCIO DA VERIFICAÇÃO DE SERVIÇO ---
+            if (!userData.services || !userData.services.includes('Arco Portus')) {
+
+                logAction({
+                    action: 'LOGIN_UNAUTHORIZED_SERVICE',
+                    module: 'AUTH',
+                    target: email,
+                    details: `Login falhou: Usuário "${email}" autenticado, mas não possui o serviço "Arco Portus" associado no CGA.`,
+                    severity: LogSeverity.MEDIA,
+                    user: {
+                        userId: userData.userId || 'N/A',
+                        name: userData.name || `Tentativa (${email})`,
+                        company: userData.company || { id: 'N/A', name: 'N/A' },
+                        role: userData.role || 'N/A',
+                        permissions: [],
+                    },
+                });
+                return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
+            }
+
             // ✅ --- CORREÇÃO CRÍTICA ---
             // Adicionamos 'name' ao payload do token.
             const token = jwt.sign(
