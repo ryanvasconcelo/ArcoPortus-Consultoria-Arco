@@ -20,10 +20,17 @@ export class AuthController {
                 { headers: { 'x-internal-api-key': apiKey } }
             );
 
-            const userData = cgaApiResponse.data;
+            // --- INÍCIO DA CORREÇÃO ---
+            // O CGA retorna { token, user: { ... } }
+            // Precisamos extrair o objeto 'user'
+            const cgaResponse = cgaApiResponse.data;
+            const userData = cgaResponse.user; // <--- MUDANÇA 1
+            // --- FIM DA CORREÇÃO ---
+
 
             // --- INÍCIO DA VERIFICAÇÃO DE SERVIÇO ---
-            if (!userData.services || !userData.services.includes('Arco Portus')) {
+            // Agora 'userData' é o objeto correto, e checamos 'services'.
+            if (!userData.services || !userData.services.includes('Arco Portus')) { // <--- MUDANÇA 2
 
                 logAction({
                     action: 'LOGIN_UNAUTHORIZED_SERVICE',
@@ -42,12 +49,12 @@ export class AuthController {
                 return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
             }
 
-            // ✅ --- CORREÇÃO CRÍTICA ---
-            // Adicionamos 'name' ao payload do token.
+            // O resto do seu código já usa a variável 'userData' corretamente.
+            // O Arco Portus gera seu próprio token, ignorando o 'cgaResponse.token', o que está OK.
             const token = jwt.sign(
                 {
                     userId: userData.userId,
-                    name: userData.name || userData.email || 'Usuário (Nome Faltando)', // <-- Fallback
+                    name: userData.name || userData.email || 'Usuário (Nome Faltando)',
                     company: userData.company,
                     role: userData.role,
                     permissions: userData.permissions,
@@ -62,16 +69,16 @@ export class AuthController {
             logAction({
                 action: 'LOGIN',
                 module: 'AUTH',
-                target: email, // <-- MUDANÇA: Alvo é o email
+                target: email,
                 details: `Login bem-sucedido para o usuário ${email}.`,
-                severity: LogSeverity.BAIXA, // <-- Regra de Negócio: OK
-                user: userData,
+                severity: LogSeverity.BAIXA,
+                user: userData, // 'userData' agora é o objeto de usuário correto
             });
 
             return res.status(200).json({
                 token,
                 user: {
-                    name: userData.name || userData.email || 'Usuário (Nome Faltando)', // <-- Fallback
+                    name: userData.name || userData.email || 'Usuário (Nome Faltando)',
                     email: userData.email,
                     role: userData.role,
                     passwordResetRequired: userData.passwordResetRequired,
@@ -79,12 +86,13 @@ export class AuthController {
             });
 
         } catch (error) {
+            // ... (seu 'catch' continua igual)
             logAction({
                 action: 'LOGIN_ATTEMPT',
                 module: 'AUTH',
-                target: email, // <-- MUDANÇA: Alvo é o email
+                target: email,
                 details: `Tentativa de login falha para o email ${email}.`,
-                severity: LogSeverity.MEDIA, // Tentativa falha é MEDIA
+                severity: LogSeverity.MEDIA,
                 user: {
                     userId: 'N/A', name: `Tentativa (${email})`,
                     company: { id: 'N/A', name: 'N/A' },
