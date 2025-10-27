@@ -14,11 +14,12 @@ export function ensureAuthenticated(
         const decoded = verify(token, process.env.ARCO_PORTUS_JWT_SECRET as string);
 
         /// --- VERIFIQUE ESTA PARTE ---
-        const { sub, name, company, role, permissions } = decoded as JwtPayload & Express.ITokenPayload;
+        const { userId, name, company, role, permissions } = decoded as JwtPayload & Express.ITokenPayload;
+
         // --- VERIFIQUE ESTA PARTE ---
 
         // --- E ESTA ---
-        req.user = { userId: sub as string, name, company, role, permissions };
+        req.user = { userId: userId as string, name, company, role, permissions };
         // --- E ESTA ---
 
         // Debug Log (Should still be there from last time)
