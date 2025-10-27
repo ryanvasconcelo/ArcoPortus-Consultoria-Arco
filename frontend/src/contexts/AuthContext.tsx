@@ -53,7 +53,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     async function signIn({ email, password }: SignInCredentials) {
-        const response = await cgaApi.post('/api/internal/auth/portus-login', { email, password });
+        // 👇 MUDANÇA AQUI
+        const response = await api.post('/api/auth/login', { email, password });
+        //                         👆 E AQUI
+
+        // A resposta do seu /api/auth/login (File 6) já é { token, user }
         const { token: apiToken, user: apiUser } = response.data;
 
         localStorage.setItem('@ArcoPortus:user', JSON.stringify(apiUser));
