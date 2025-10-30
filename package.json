@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node build/index.js",
+    "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only --files backend/src/routes/index.ts"
   },
   "keywords": [],
