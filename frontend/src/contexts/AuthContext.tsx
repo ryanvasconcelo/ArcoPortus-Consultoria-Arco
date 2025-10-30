@@ -54,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     async function signIn({ email, password }: SignInCredentials) {
         // 👇 MUDANÇA AQUI
-        const response = await api.post('/api/auth/login', { email, password });
+        const response = await cgaApi.post('/api/auth/login', { email, password });
         //                         👆 E AQUI
 
         // A resposta do seu /api/auth/login (File 6) já é { token, user }
