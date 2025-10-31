@@ -3,7 +3,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://arcoportus.pktech.ai'
+  baseURL: 'https://arcoportus.pktech.ai/api' // AGORA INCLUI /api
 });
+
 
 export default api;
