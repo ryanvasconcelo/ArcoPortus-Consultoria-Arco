@@ -76,7 +76,7 @@ const ArcoPortusLogin = () => {
 
       {/* Header Text - Topo Direito */}
       <div className="absolute top-8 right-7 lg:top-16 lg:right-60 z-20 text-center max-w-md lg:max-w-lg px-4">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-light text-white -mb-1">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary -mb-1">
           Plataforma de
         </h1>
         <h2 className="text-sm sm:text-base lg:text-lg font-bold text-white uppercase tracking-wide -mb-1">
