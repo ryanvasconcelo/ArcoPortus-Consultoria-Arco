@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import cgaApi from '../services/cgaApi';  // API para autenticação via CGA
 
 interface User {
     name: string;
@@ -52,11 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     async function signIn({ email, password }: SignInCredentials) {
-        // 👇 MUDANÇA AQUI
-        const response = await api.post('/auth/login', { email, password });
-        //                         👆 E AQUI
-
-        // A resposta do seu /api/auth/login (File 6) já é { token, user }
+        const response = await cgaApi.post('/api/internal/auth/portus-login', { email, password });
         const { token: apiToken, user: apiUser } = response.data;
 
         localStorage.setItem('@ArcoPortus:user', JSON.stringify(apiUser));

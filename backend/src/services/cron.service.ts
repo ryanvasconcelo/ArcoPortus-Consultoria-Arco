@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
  */
 export async function deleteOldAuditLogs() {
     console.log('--- [CRON JOB] Executando exclusão de logs de auditoria antigos...');
-    
+
     try {
         const date30DaysAgo = new Date();
         date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);

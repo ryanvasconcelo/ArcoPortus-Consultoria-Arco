@@ -40,7 +40,7 @@ services:
       CORS_ORIGIN: https://arcoportus.pktech.ai
       NODE_ENV: production
       PORT: 3335
-      CGA_INTERNAL_API_URL: https://cga.pktech.ai/api
+      CGA_INTERNAL_API_URL: http://cga_backend_api:3333/api
       INTERNAL_API_KEY: NDQBFansjdnqfbquwb1237asud1ngjnJAFWJNFjnaisf9283nfjNFnfjqnfbsu91293JNDjNDQWBFUBWjqwufbasjnjncw98124012.1e209eqsjcanjn
     secrets:
       - arcoportus_db_user
