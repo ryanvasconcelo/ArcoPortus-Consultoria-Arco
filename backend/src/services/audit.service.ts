@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { LogSeverity } from '@prisma/client';
+import { randomUUID } from 'crypto'; // ✅ IMPORTAR
 
 // Interface do usuário vinda de req.user
 interface LogUserPayload {
@@ -7,7 +8,7 @@ interface LogUserPayload {
     name: string;
     company: {
         id: string;
-        name: string; // <-- O nome da empresa está aqui
+        name: string;
     };
     role: string;
     permissions: string[];
@@ -34,31 +35,40 @@ export async function logAction({
     user,
 }: LogActionData): Promise<void> {
     try {
-        // Validação crucial
-        if (!user || !user.company || !user.company.id || !user.name) {
-            console.error('--- [DEBUG AUDIT LOG] Falha ao registrar log: Payload do usuário inválido ou incompleto. ---');
-            console.error('--- [DEBUG AUDIT LOG] Payload recebido:', JSON.stringify(user, null, 2));
+        // ✅ VALIDAÇÃO MAIS FLEXÍVEL: Aceita 'N/A' e 'System'
+        if (!user) {
+            console.error('[AUDIT LOG] Payload do usuário ausente, abortando log.');
             return;
         }
 
+        // ✅ Para casos de 'N/A' ou 'System', use valores padrão
+        const safeUserId = user.userId && user.userId !== 'N/A' && user.userId !== 'System'
+            ? user.userId
+            : randomUUID(); // Gera UUID temporário para System
+
+        const safeCompanyId = user.company?.id && user.company.id !== 'N/A'
+            ? user.company.id
+            : randomUUID(); // Gera UUID temporário para System
+
         await prisma.auditLog.create({
             data: {
+                id: randomUUID(), // ✅ CRÍTICO: Gerar UUID explícito
                 action,
                 module,
-                target,
+                target: target || 'N/A',
                 details,
                 severity,
-                userId: user.userId,
-                userName: user.name,
-                userRole: user.role,
-                companyId: user.company.id,
-                companyName: user.company.name, // <-- MUDANÇA 2: Salvando o nome da empresa
+                userId: safeUserId,
+                userName: user.name || 'Sistema',
+                userRole: user.role || 'System',
+                companyId: safeCompanyId,
+                companyName: user.company?.name || 'Sistema',
             },
         });
 
-        console.log(`--- [AUDIT LOG SUCCESS] Ação ${action} no módulo ${module} registrada para ${user.name}. ---`);
+        console.log(`[AUDIT LOG] ✅ ${action} no módulo ${module} registrado para ${user.name}`);
 
     } catch (error) {
-        console.error('--- [AUDIT LOG ERROR] Falha ao registrar ação de auditoria no Prisma:', error);
+        console.error('[AUDIT LOG ERROR] Falha ao registrar auditoria:', error);
     }
 }
