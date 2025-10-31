@@ -75,7 +75,7 @@ const ArcoPortusLogin = () => {
       </div>
 
       {/* Header Text - Topo Direito */}
-      <div className="absolute top-8 right-7 lg:top-16 lg:right-60 z-20 text-center max-w-md lg:max-w-lg px-4">
+      <div className="absolute top-8 right-7 lg:top-16 lg:right-60 text-center max-w-md lg:max-w-lg px-4">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary -mb-1">
           Plataforma de
         </h1>
@@ -166,14 +166,14 @@ const ArcoPortusLogin = () => {
           <div className="mt-6 text-center">
             <p className="text-xs text-white/60 mb-2">Certificações e Conformidades</p>
             <div className="flex justify-center items-center">
-              <img src={certifies} alt="Certificações" className="w-full sm:w-64 object-contain" />
+              <img src={certifies} alt="Certificações" className="w-full sm:w-48 object-contain" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer com Logo ARCO */}
-      <div className="absolute bottom-4 left-0 right-0 z-20 text-center px-4 sm:bottom-6">
+      <div className="absolute bottom-4 left-0 right-0 z-20 text-center px-4 sm:bottom-2">
         <div className="flex flex-col items-center space-y-2">
           <div className="text-white/80 text-xs sm:text-sm">
             <img src={logoArco} alt="" className="w-20 mx-auto pb-2" />
