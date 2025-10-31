@@ -77,97 +77,98 @@ const ArcoPortusLogin = () => {
           alt="Background"
           className="w-full h-full object-cover absolute inset-0"
         />
-
       </div>
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-7xl grid lg:grid-cols-[1.1fr,1fr] gap-16 items-center">
-          <div className="text-white space-y-10">
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-8xl grid grid-cols-1 lg:grid-cols-[1.1fr,1.3fr] gap-8 lg:gap-16 items-center">
+          <div className="text-white space-y-10 hidden lg:block">
+            {/* Conteúdo lateral opcional */}
           </div>
-          <div className="relative ">
-            <div className="relative left-36 bg-white/95 backdrop-blur-xl rounded-3xl px-12 py-8 shadow-2xl border border-white/20 animate-scale-in">
-              <div className="mb-10 text-center">
-                <div className="relative inline-block mb-6">
-                  <img src={arcoPortusLogo} alt="Arco Portus" className="h-20 mx-auto relative z-10" />
-                  <div className="absolute inset-0 bg-secondary/20 blur-2xl rounded-full"></div>
-                </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-3">Bem-vindo</h2>
-                <p className="text-gray-500 text-base">Acesse sua conta para continuar</p>
+
+          <div className="relative w-full max-w-xl mx-auto bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/20 animate-scale-in">
+            <div className="mb-8 text-center">
+              <div className="relative inline-block mb-6">
+                <img src={arcoPortusLogo} alt="Arco Portus" className="h-16 sm:h-20 mx-auto relative z-10" />
+                <div className="absolute inset-0 bg-secondary/20 blur-2xl rounded-full"></div>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Bem-vindo</h2>
+              <p className="text-gray-500 text-sm sm:text-base">Acesse sua conta para continuar</p>
+            </div>
+
+            <form onSubmit={handleSignIn} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 sm:h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl text-base transition-all"
+                  required
+                  disabled={isLoading}
+                />
               </div>
 
-              <form onSubmit={handleSignIn} className="space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email</Label>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-700 font-medium text-sm">Senha</Label>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl text-base transition-all"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 sm:h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl pr-14 text-base transition-all"
                     required
                     disabled={isLoading}
                   />
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="password" className="text-gray-700 font-medium text-sm">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl pr-14 text-base transition-all"
-                      required
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-14 bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Acessando..." : "Acessar Plataforma"}
-                </Button>
-
-                <div className="text-center pt-2">
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setIsForgotModalOpen(true);
-                    }}
-                    className="text-sm text-secondary hover:text-secondary/80 font-medium transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
                   >
-                    Esqueci minha senha →
-                  </a>
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
-              </form>
-              <div className="mt-10 pt-8 border-t border-gray-200">
-                <p className="text-xs text-gray-400 text-center mb-4">Certificações e Conformidades</p>
-                <div className="flex justify-center items-center gap-8">
-                  <img src={certifies} alt="" className="w-72" />
-                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 sm:h-14 bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white font-semibold text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                disabled={isLoading}
+              >
+                {isLoading ? "Acessando..." : "Acessar Plataforma"}
+              </Button>
+
+              <div className="text-center pt-2">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsForgotModalOpen(true);
+                  }}
+                  className="text-sm text-secondary hover:text-secondary/80 font-medium transition-colors"
+                >
+                  Esqueci minha senha →
+                </a>
+              </div>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-400 text-center mb-4">Certificações e Conformidades</p>
+              <div className="flex justify-center items-center">
+                <img src={certifies} alt="" className="max-w-full h-auto" />
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div className="absolute bottom-6 left-0 right-0 text-center text-white/40 text-sm z-10">
+
+      <div className="absolute bottom-4 left-0 right-0 text-center text-white/40 text-xs sm:text-sm z-10 px-4">
         <p>© 2025_V02 Arco Security I Academy I Solutions - Todos os direitos reservados.</p>
       </div>
 
-      {/* 6. Renderiza o modal condicionalmente */}
       {isForgotModalOpen && (
         <ForgotPasswordModal
           onClose={() => setIsForgotModalOpen(false)}
@@ -175,6 +176,7 @@ const ArcoPortusLogin = () => {
         />
       )}
     </div>
+
   );
 };
 
