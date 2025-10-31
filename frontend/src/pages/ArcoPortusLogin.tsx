@@ -92,34 +92,6 @@ const ArcoPortusLogin = () => {
                 Ecossistema completo de soluções integradas para transformar a gestão do seu negócio
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 pt-4">
-              {[
-                { name: "Arco Portus", desc: "Documentação portuária", color: "from-yellow-500 to-yellow-600", logo: arcoPortusLogo },
-                { name: "ACCIA", desc: "Gestão empresarial", color: "from-blue-500 to-blue-600" },
-                { name: "ArcoMoki", desc: "Checklist digital", color: "from-green-500 to-green-600" },
-                { name: "ArcoView", desc: "Monitoramento visual", color: "from-cyan-500 to-cyan-600" },
-                { name: "GuardControl", desc: "Controle de acesso", color: "from-purple-500 to-purple-600" },
-                { name: "UNICASP", desc: "Educação cooperativa", color: "from-amber-500 to-amber-600" },
-                { name: "CGA", desc: "Central de gestão", color: "from-orange-500 to-orange-600" },
-              ].map((service, idx) => (
-                <div
-                  key={service.name}
-                  className="group relative bg-white/5 backdrop-blur-sm p-5 rounded-xl border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-105 hover:bg-white/10 cursor-pointer animate-fade-in"
-                  style={{ animationDelay: `${idx * 0.1}s` }}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-10 rounded-xl transition-opacity duration-300`}></div>
-                  {service.logo ? (
-                    <img src={service.logo} alt={service.name} className="h-10 mb-3 object-contain" />
-                  ) : (
-                    <div className={`h-10 mb-3 flex items-center text-xl font-bold bg-gradient-to-r ${service.color} bg-clip-text text-transparent`}>
-                      {service.name}
-                    </div>
-                  )}
-                  <h3 className="font-bold text-base mb-1 text-white group-hover:text-secondary transition-colors">{service.name}</h3>
-                  <p className="text-xs text-gray-400">{service.desc}</p>
-                </div>
-              ))}
-            </div>
           </div>
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl"></div>
