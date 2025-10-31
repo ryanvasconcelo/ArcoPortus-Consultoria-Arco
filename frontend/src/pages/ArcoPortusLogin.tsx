@@ -142,7 +142,7 @@ const ArcoPortusLogin = () => {
 
               <Button
                 type="submit"
-                className="w-full h-12 sm:h-14 bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white font-semibold text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="w-full h-12 sm:h-14 bg-gradient-to-r from-primary to-primary/50 hover:from-primary/90 hover:to-primary text-white font-semibold text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                 disabled={isLoading}
               >
                 {isLoading ? "Acessando..." : "Acessar Plataforma"}
