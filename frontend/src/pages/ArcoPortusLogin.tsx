@@ -7,6 +7,9 @@ import { Eye, EyeOff } from "lucide-react";
 import arcoPortusLogo from "@/assets/arco-portus-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import certifies from "@/assets/certifys.png";
+import arcoBg from "@/assets/background-login.png";
+
 // --- MODIFICAÇÃO INÍCIO ---
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal"; // 1. Importa o novo modal
 import api from "@/services/api"; // 2. Importa nossa instância da API
@@ -69,32 +72,19 @@ const ArcoPortusLogin = () => {
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-10"></div>
-        <div className="absolute top-20 left-10 w-96 h-96 bg-secondary/30 rounded-full filter blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-primary/30 rounded-full filter blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <img
+          src={arcoBg}
+          alt="Background"
+          className="w-full h-full object-cover absolute inset-0"
+        />
+
       </div>
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-7xl grid lg:grid-cols-[1.1fr,1fr] gap-16 items-center">
           <div className="text-white space-y-10">
-            <div className="space-y-6 animate-fade-in">
-              <div className="inline-block">
-                <div className="text-6xl font-black tracking-tight leading-tight">
-                  ARCO
-                  <div className="h-1 w-24 bg-gradient-to-r from-secondary via-primary to-accent rounded-full mt-2"></div>
-                </div>
-              </div>
-              <h1 className="text-3xl font-light text-gray-200">
-                Uma solução para cada <span className="font-semibold text-secondary">necessidade</span>
-              </h1>
-              <p className="text-lg text-gray-400 max-w-xl">
-                Ecossistema completo de soluções integradas para transformar a gestão do seu negócio
-              </p>
-            </div>
           </div>
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl"></div>
-            <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20 animate-scale-in">
+          <div className="relative ">
+            <div className="relative left-36 bg-white/95 backdrop-blur-xl rounded-3xl px-12 py-8 shadow-2xl border border-white/20 animate-scale-in">
               <div className="mb-10 text-center">
                 <div className="relative inline-block mb-6">
                   <img src={arcoPortusLogo} alt="Arco Portus" className="h-20 mx-auto relative z-10" />
@@ -125,7 +115,7 @@ const ArcoPortusLogin = () => {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder="••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-14 border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-xl pr-14 text-base transition-all"
@@ -151,8 +141,6 @@ const ArcoPortusLogin = () => {
                 </Button>
 
                 <div className="text-center pt-2">
-                  {/* --- MODIFICAÇÃO INÍCIO --- */}
-                  {/* 5. Conecta o link para abrir o modal */}
                   <a
                     href="#"
                     onClick={(e) => {
@@ -163,24 +151,12 @@ const ArcoPortusLogin = () => {
                   >
                     Esqueci minha senha →
                   </a>
-                  {/* --- MODIFICAÇÃO FIM --- */}
                 </div>
               </form>
               <div className="mt-10 pt-8 border-t border-gray-200">
                 <p className="text-xs text-gray-400 text-center mb-4">Certificações e Conformidades</p>
                 <div className="flex justify-center items-center gap-8">
-                  {[
-                    { icon: "🏆", label: "PSP" },
-                    { icon: "🛡️", label: "ISPS CODE" },
-                    { icon: "✓", label: "LGPD" }
-                  ].map((cert) => (
-                    <div key={cert.label} className="text-center group">
-                      <div className="w-14 h-14 mx-auto mb-2 bg-gradient-to-br from-secondary/10 to-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <span className="text-2xl">{cert.icon}</span>
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium">{cert.label}</p>
-                    </div>
-                  ))}
+                  <img src={certifies} alt="" className="w-72" />
                 </div>
               </div>
             </div>
@@ -188,10 +164,9 @@ const ArcoPortusLogin = () => {
         </div>
       </div>
       <div className="absolute bottom-6 left-0 right-0 text-center text-white/40 text-sm z-10">
-        <p>© 2024 Arco Consultoria em Segurança - Todos os direitos reservados</p>
+        <p>© 2025_V02 Arco Security I Academy I Solutions - Todos os direitos reservados.</p>
       </div>
 
-      {/* --- MODIFICAÇÃO INÍCIO --- */}
       {/* 6. Renderiza o modal condicionalmente */}
       {isForgotModalOpen && (
         <ForgotPasswordModal
@@ -199,7 +174,6 @@ const ArcoPortusLogin = () => {
           onSubmit={handleForgotPasswordSubmit}
         />
       )}
-      {/* --- MODIFICAÇÃO FIM --- */}
     </div>
   );
 };
