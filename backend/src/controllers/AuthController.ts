@@ -27,10 +27,6 @@ export class AuthController {
             // --- FIM DA CORREÇÃO ---
 
 
-            // (Não precisamos de 'cgaResponse.user')
-            // --- FIM DA CORREÇÃO ---
-
-
             // --- VERIFICAÇÃO DE SERVIÇO (Correção #9) ---
             // O CGA deve retornar um array de strings em `services`.
             const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
@@ -56,7 +52,6 @@ export class AuthController {
                 return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
             }
             // --- FIM DA VERIFICAÇÃO ---
-
 
             // Se passou, geramos o token
             const token = jwt.sign(
