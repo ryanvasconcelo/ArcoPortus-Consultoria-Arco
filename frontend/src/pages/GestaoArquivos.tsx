@@ -1,12 +1,10 @@
 import ArcoPortusHeader from "@/components/Header";
-import ArcoPortusFooter from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   FileText,
   Camera,
   ClipboardCheck,
-  GraduationCap,
   Scale
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -60,11 +58,12 @@ const GestaoArquivos = () => {
       color: "from-pink-500/20 to-pink-600/20",
       external: true
     },
+    // ✅ CORREÇÃO #2: Card de Treinamento REMOVIDO, Card de Auditoria ADICIONADO
     {
       path: "/auditoria",
       label: "AUDITORIA",
       icon: Scale,
-      color: "from-yellow-500/20 to-yellow-600/20"
+      color: "from-amber-500/20 to-amber-600/20"
     },
     {
       path: "/sistema-cftv",

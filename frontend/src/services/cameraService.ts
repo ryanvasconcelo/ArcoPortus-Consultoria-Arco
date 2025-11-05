@@ -1,7 +1,6 @@
 // src/services/cameraService.ts
-import api from './api'; // Ou seu wrapper axios
+import api from './api';
 
-// --- CORREÇÃO 1: Atualizar a interface Camera ---
 export interface Camera {
     id: string;
     name: string;
@@ -13,24 +12,21 @@ export interface Camera {
     type: string | null;
     area: string | null;
     hasAnalytics: boolean | null;
-    // recordingDays: number | null; // <-- Linha antiga removida/comentada
-    recordingHours: number | null; // <-- Nova propriedade (Float vira number no TS)
-    deactivatedAt: string | null; // Prisma DateTime vira string (ISO 8601)
-    isActive: boolean;
+    recordingHours: number | null; // ✅ Correção #4: Campo de horas de gravação
+    deactivatedAt: string | null;
+    isActive: boolean; // ✅ Correção #3: Campo isActive
     companyId: string;
-    createdAt: string; // Prisma DateTime vira string (ISO 8601)
-    updatedAt: string; // Prisma DateTime vira string (ISO 8601)
+    createdAt: string;
+    updatedAt: string;
 }
 
-// Assumindo que a API retorna um objeto com 'message' na importação
 interface ImportResult {
     message: string;
 }
 
-// Interface para o resultado da exclusão em massa
 interface DeleteManyResult {
     message: string;
-    count: number;
+    count?: number;
 }
 
 export const cameraService = {
@@ -39,12 +35,12 @@ export const cameraService = {
         return response.data;
     },
 
-    async createCamera(data: Partial<Camera>): Promise<Camera> { // Aceita Partial<Camera>
+    async createCamera(data: Partial<Camera>): Promise<Camera> {
         const response = await api.post<Camera>('/api/cameras', data);
         return response.data;
     },
 
-    async updateCamera(id: string, data: Partial<Camera>): Promise<Camera> { // Aceita Partial<Camera>
+    async updateCamera(id: string, data: Partial<Camera>): Promise<Camera> {
         const response = await api.patch<Camera>(`/api/cameras/${id}`, data);
         return response.data;
     },
@@ -61,14 +57,29 @@ export const cameraService = {
         });
         return response.data;
     },
-    // Correção #11: Exclusão em massa
+
+    // ✅ CORREÇÃO #11: Exclusão em massa com rota corrigida
     async deleteManyCameras(ids: string[]): Promise<DeleteManyResult> {
-        const response = await api.post<DeleteManyResult>('/api/cameras/delete-many', { ids });
+        // MUDANÇA CRÍTICA: Rota alterada de /many para /bulk
+        const response = await api.delete<DeleteManyResult>('/api/cameras/bulk', {
+            data: { ids }
+        });
         return response.data;
     },
 
-    // Correção #6: Download do template (não precisa de lógica aqui, apenas a chamada)
-    // A função de download está no SistemaCFTV.tsx e usa o `api` diretamente.
-    // Manter a interface de serviço limpa.
+    // ✅ CORREÇÃO #10: Exportação de câmeras
+    async exportCameras(): Promise<Blob> {
+        const response = await api.get('/api/cameras/export', {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
 
+    // ✅ CORREÇÃO #6: Download do template
+    async downloadTemplate(): Promise<Blob> {
+        const response = await api.get('/api/cameras/template/download', {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
 };

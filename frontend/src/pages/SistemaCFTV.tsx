@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RecordingTimer } from "@/components/RecordingTimer";
 import {
-  Plus, Search, Edit, Trash2, FileSpreadsheet, Upload, X,
+  Plus, Search, Edit, Trash2, Upload, X,
   ChevronLeft, ChevronRight, Video, CheckCircle, XCircle, Wrench, Download, Loader2, AlertTriangle
 } from "lucide-react";
 import ArcoPortusHeader from "@/components/Header";
@@ -15,9 +15,6 @@ import Sidebar from "@/components/Sidebar";
 import { EnhancedCameraModal } from "@/components/EnhancedCameraModal";
 import { AddCameraModal } from "@/components/AddCameraModal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
-import { InstructionsModal } from "@/components/InstructionsModal";
-import { api } from "@/services/api";
-
 
 const ITEMS_PER_PAGE = 7;
 type StatusFilter = 'all' | 'operacional' | 'inativa';
@@ -28,7 +25,6 @@ const SistemaCFTV = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddCameraOpen, setIsAddCameraOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [editingCamera, setEditingCamera] = useState<Camera | null>(null);
   const [cameraToDelete, setCameraToDelete] = useState<Camera | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -38,9 +34,8 @@ const SistemaCFTV = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteManyOpen, setIsDeleteManyOpen] = useState(false);
   const [isDeletingMany, setIsDeletingMany] = useState(false);
-  const [selectedCameras, setSelectedCameras] = useState<string[]>([]); // Para exclusão em massa
+  const [selectedCameras, setSelectedCameras] = useState<string[]>([]);
 
-  // Lógica de seleção
   const handleSelectCamera = (id: string, isChecked: boolean) => {
     setSelectedCameras(prev => {
       if (isChecked) {
@@ -122,7 +117,6 @@ const SistemaCFTV = () => {
   const handleDeleteManyCameras = async () => {
     setIsDeletingMany(true);
     try {
-      // Correção #11: Usar o novo endpoint de exclusão em massa
       const result = await cameraService.deleteManyCameras(selectedCameras);
       toast({ title: "Exclusão em Massa Concluída", description: result.message || `${result.count} câmeras foram excluídas.` });
       setIsDeleteManyOpen(false);
@@ -161,8 +155,8 @@ const SistemaCFTV = () => {
 
   const handleExport = async () => {
     try {
-      const response = await api.get('/api/cameras/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = await cameraService.exportCameras();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', 'export_cameras.xlsx');
@@ -178,11 +172,11 @@ const SistemaCFTV = () => {
     }
   };
 
-  // Correção #6: Download do Template
+  // ✅ CORREÇÃO #6: Download do Template
   const handleDownloadTemplate = async () => {
     try {
-      const response = await api.get('/api/cameras/template', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = await cameraService.downloadTemplate();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', 'template_importacao_cameras.xlsx');
@@ -244,7 +238,6 @@ const SistemaCFTV = () => {
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
             <Sidebar />
             <div className="flex-1 min-w-0">
-              {/* Cabeçalho */}
               <div className="bg-secondary text-white text-center py-3 sm:py-4 rounded-t-lg mb-4 sm:mb-6">
                 <h1 className="text-lg sm:text-xl font-bold px-4">SISTEMA DE CFTV</h1>
               </div>
@@ -289,7 +282,7 @@ const SistemaCFTV = () => {
                 </Card>
               </div>
 
-              {/* Barra de Ações e Busca */}
+              {/* Barra de Ações */}
               <Card className="mb-6">
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -311,14 +304,14 @@ const SistemaCFTV = () => {
                         <Download className="h-4 w-4 mr-2" />Template
                       </Button>
                       <Button variant="destructive" onClick={() => setIsDeleteManyOpen(true)} className="flex-1" disabled={selectedCameras.length === 0}>
-                        <Trash2 className="h-4 w-4 mr-2" />Excluir Selecionadas ({selectedCameras.length})
+                        <Trash2 className="h-4 w-4 mr-2" />Excluir ({selectedCameras.length})
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
               </Card>
 
-              {/* Layout Principal: Lista e Detalhes */}
+              {/* Layout Principal */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className={selectedCamera ? "lg:col-span-2" : "col-span-1 lg:col-span-3 transition-all duration-300"}>
                   <Card className="overflow-hidden">
@@ -328,12 +321,7 @@ const SistemaCFTV = () => {
                           <thead className="bg-muted/50">
                             <tr>
                               <th className="text-center p-2 sm:p-4 font-medium text-xs sm:text-sm w-10">
-                                <input
-                                  type="checkbox"
-                                  className="form-checkbox h-4 w-4 text-primary rounded"
-                                  checked={selectedCameras.length === paginatedCameras.length && paginatedCameras.length > 0}
-                                  onChange={handleSelectAll}
-                                />
+                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded" checked={selectedCameras.length === paginatedCameras.length && paginatedCameras.length > 0} onChange={handleSelectAll} />
                               </th>
                               <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm">Nº Câmera</th>
                               <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm">Local</th>
@@ -352,18 +340,12 @@ const SistemaCFTV = () => {
                               paginatedCameras.map((camera) => (
                                 <tr key={camera.id} className={`border-t cursor-pointer hover:bg-muted/40 transition-colors ${selectedCameras.includes(camera.id) ? 'bg-secondary/10' : ''}`} onClick={() => setSelectedCamera(camera)}>
                                   <td className="p-2 sm:p-4 text-center">
-                                    <input
-                                      type="checkbox"
-                                      className="form-checkbox h-4 w-4 text-primary rounded"
-                                      checked={selectedCameras.includes(camera.id)}
-                                      onChange={(e) => handleSelectCamera(camera.id, e.target.checked)}
-                                      onClick={(e) => e.stopPropagation()} // Evita que o clique na linha deselecione
-                                    />
+                                    <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded" checked={selectedCameras.includes(camera.id)} onChange={(e) => handleSelectCamera(camera.id, e.target.checked)} onClick={(e) => e.stopPropagation()} />
                                   </td>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm font-medium" onClick={() => setSelectedCamera(camera)}>{camera.name}</td>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-xs" onClick={() => setSelectedCamera(camera)}>{camera.location || '-'}</td>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm text-center" onClick={() => setSelectedCamera(camera)}>{camera.businessUnit || '-'}</td>
-                                  <td className="p-2 sm:p-4 text-center" onClick={() => setSelectedCamera(camera)}>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm font-medium">{camera.name}</td>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-xs">{camera.location || '-'}</td>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm text-center">{camera.businessUnit || '-'}</td>
+                                  <td className="p-2 sm:p-4 text-center">
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] whitespace-nowrap ${camera.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                       {camera.isActive ? 'Operacional' : 'Inativa'}
                                     </span>
@@ -380,10 +362,8 @@ const SistemaCFTV = () => {
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
                               <ChevronLeft className="h-4 w-4" />
-                              <span className="hidden sm:inline ml-1">Anterior</span>
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
-                              <span className="hidden sm:inline mr-1">Próxima</span>
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                           </div>
@@ -459,7 +439,6 @@ const SistemaCFTV = () => {
           <div className="container mx-auto">© 2025_V02 Arco Security I  Academy  I  Solutions - Todos os direitos reservados.</div>
         </footer>
 
-        {/* Modais */}
         {isAddCameraOpen && (
           <EnhancedCameraModal
             editData={editingCamera}
@@ -478,22 +457,6 @@ const SistemaCFTV = () => {
           message={<>Tem certeza que deseja excluir a câmera <strong>{cameraToDelete?.name}</strong>?</>}
           isLoading={isDeleting}
         />
-        <InstructionsModal
-          isOpen={isInstructionsOpen}
-          onClose={() => setIsInstructionsOpen(false)}
-          title="Instruções para Importação"
-          downloadUrl="/modelo_importacao_cameras.xlsx"
-          downloadFilename="Modelo_Importacao_Cameras.xlsx"
-        >
-          <ul className="space-y-2 list-decimal pl-4">
-            <li>Abra o modelo de planilha e preencha as informações das câmeras, uma por linha.</li>
-            <li>A coluna <strong>"Nº Câmera"</strong> é obrigatória para cada registro.</li>
-            <li>Para as colunas "Em Funcionamento ?" e "POSSUI ANÁLITICO?", use apenas os textos "Sim" ou "Não".</li>
-            <li>Salve o arquivo preenchido, mantendo o formato <strong>.xlsx</strong>.</li>
-            <li>Clique no botão "Importar" e selecione o seu arquivo salvo.</li>
-          </ul>
-        </InstructionsModal>
-
         <ConfirmationModal
           isOpen={isDeleteManyOpen}
           onClose={() => setIsDeleteManyOpen(false)}

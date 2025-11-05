@@ -16,15 +16,15 @@ const Sidebar = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Função auxiliar para verificar permissão
+  // ✅ CORREÇÃO #8: Função auxiliar para verificar permissão
   const hasPermission = (requiredPermission: string) => {
     if (!user || !user.permissions) return false;
     return user.permissions.includes(requiredPermission);
   };
 
   const menuItems = [
-    // Correção #8: Adicionar permissões
     { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true },
+    // ✅ CORREÇÃO #8: Adicionar permissões para ocultar áreas sem acesso
     { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText, permission: 'VIEW:DIAGNOSTIC' },
     { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText, permission: 'VIEW:NORMS' },
     { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText, permission: 'VIEW:REGISTERS' },
@@ -32,7 +32,7 @@ const Sidebar = () => {
     { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLATION' },
     { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true },
     { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera, permission: 'VIEW:CFTV' },
-    { path: "/auditoria", label: "AUDITORIA", icon: Shield },
+    { path: "/auditoria", label: "AUDITORIA", icon: Shield, permission: 'VIEW:AUDIT' },
   ];
 
   return (
@@ -40,9 +40,9 @@ const Sidebar = () => {
       <Card className="glass-card">
         <CardContent className="p-4 space-y-3">
           {menuItems.map((item) => {
-            // Correção #8: Ocultar item se o usuário não tiver a permissão necessária
+            // ✅ CORREÇÃO #8: Ocultar item se o usuário não tiver a permissão necessária
             if (item.permission && !hasPermission(item.permission)) {
-              return null;
+              return null; // Não renderiza o item
             }
 
             const Icon = item.icon;
@@ -66,8 +66,9 @@ const Sidebar = () => {
           })}
 
           <div className="pt-4 space-y-3">
-            <div className="bg-muted p-4 rounded-lg">
-              {hasPermission('VIEW:DASHBOARDS') && (
+            {/* Dashboard - Visível apenas para quem tem permissão */}
+            {hasPermission('VIEW:DASHBOARDS') && (
+              <div className="bg-muted p-4 rounded-lg">
                 <Button
                   className="w-full bg-secondary text-white hover:bg-secondary/90 flex-col h-auto py-3"
                   onClick={() => navigate("/dashboard")}
@@ -76,8 +77,10 @@ const Sidebar = () => {
                   <span className="text-xs">Dashboards</span>
                   <span className="text-xs">Acessar</span>
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Treinamentos - Sempre visível (link externo) */}
             <div
               className="bg-muted p-4 rounded-lg text-center cursor-pointer hover:bg-muted/80 transition-colors"
               onClick={() => window.open("https://unicasp.woli.com.br/pt-BR/Login/Index?returnUrl=%2F", "_blank")}

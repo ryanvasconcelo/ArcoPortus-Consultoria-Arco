@@ -4,9 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// ✅ 1. Importe o AuthProvider e o ProtectedRoute
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedLayout } from "./components/routes/ProtectedRoute";
+import { PermissionRoute } from "./components/routes/PermissionRoute";
 
 // General Pages
 import Contact from "./pages/Contact";
@@ -40,27 +40,77 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AuthProvider>
-
           <Routes>
-            {/* --- GRUPO DE ROTAS PÚBLICAS --- */}
-            {/* Apenas a rota de login é verdadeiramente pública */}
+            {/* --- ROTAS PÚBLICAS --- */}
             <Route path="/login" element={<ArcoPortusLogin />} />
             <Route path="/primeiro-acesso" element={<FirstAccessChangePassword />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
 
-            {/* --- GRUPO DE ROTAS PROTEGIDAS --- */}
-            {/* O componente ProtectedLayout é o "porteiro" de todas as rotas aninhadas abaixo dele */}
+            {/* --- ROTAS PROTEGIDAS --- */}
             <Route element={<ProtectedLayout />}>
               <Route element={<FirstLoginGate />}>
                 <Route path="/" element={<ArcoPortusHome />} />
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/gestao-arquivos" element={<GestaoArquivos />} />
-                <Route path="/diagnostico-ear" element={<DiagnosticoEAR />} />
-                <Route path="/normas-procedimentos" element={<NormasProcedimentos />} />
-                <Route path="/documentos-registros" element={<DocumentosRegistros />} />
-                <Route path="/legislacao" element={<Legislacao />} />
-                <Route path="/sistema-cftv" element={<SistemaCFTV />} />
-                <Route path="/auditoria" element={<Auditoria />} />
+
+                {/* ✅ CORREÇÃO #8: Rotas protegidas por permissão */}
+                <Route
+                  path="/diagnostico-ear"
+                  element={
+                    <PermissionRoute permission="VIEW:DIAGNOSTIC">
+                      <DiagnosticoEAR />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/normas-procedimentos"
+                  element={
+                    <PermissionRoute permission="VIEW:NORMS">
+                      <NormasProcedimentos />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/documentos-registros"
+                  element={
+                    <PermissionRoute permission="VIEW:REGISTERS">
+                      <DocumentosRegistros />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/legislacao"
+                  element={
+                    <PermissionRoute permission="VIEW:LEGISLATION">
+                      <Legislacao />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/sistema-cftv"
+                  element={
+                    <PermissionRoute permission="VIEW:CFTV">
+                      <SistemaCFTV />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/auditoria"
+                  element={
+                    <PermissionRoute permission="VIEW:AUDIT">
+                      <Auditoria />
+                    </PermissionRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <PermissionRoute permission="VIEW:DASHBOARDS">
+                      <Dashboard />
+                    </PermissionRoute>
+                  }
+                />
+
+                {/* Rotas públicas dentro do layout protegido */}
                 <Route path="/contato" element={<Contact />} />
                 <Route path="/canal-denuncias" element={<WhistleblowerChannel />} />
                 <Route path="/condicoes-uso" element={<CondicoesUso />} />
@@ -69,14 +119,12 @@ const App = () => (
               </Route>
             </Route>
 
-            {/* --- ROTA DE NOT FOUND --- */}
-            {/* Esta rota pega qualquer URL que não corresponda às anteriores */}
+            {/* --- ROTA NOT FOUND --- */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-
         </AuthProvider>
       </TooltipProvider>
-    </QueryClientProvider >
+    </QueryClientProvider>
   </BrowserRouter>
 );
 
