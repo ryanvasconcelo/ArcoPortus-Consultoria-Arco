@@ -18,6 +18,7 @@ cameraRoutes.patch('/:id', ensureAuthenticated, cameraController.update); // Ass
 // --- Linha 14 Corrigida ---
 cameraRoutes.delete('/:id', ensureAuthenticated, cameraController.delete);
 
+
 // Rota de Importação
 cameraRoutes.post(
     '/import',
@@ -47,6 +48,6 @@ cameraRoutes.delete(
     cameraController.deleteMany
 );
 
-cameraRoutes.delete('/:id', ensureAuthenticated, cameraController.delete); // Rota de delete individual
+
 
 export { cameraRoutes };

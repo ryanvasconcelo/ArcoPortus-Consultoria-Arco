@@ -24,15 +24,15 @@ const Sidebar = () => {
 
   const menuItems = [
     // Correção #8: Adicionar permissões
-    { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true, permission: 'VIEW:ARESP' },
+    { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true },
     { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText, permission: 'VIEW:DIAGNOSTIC' },
     { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText, permission: 'VIEW:NORMS' },
     { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText, permission: 'VIEW:REGISTERS' },
-    { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true, permission: 'VIEW:OCORRENCIAS' },
+    { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true },
     { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLATION' },
-    { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true, permission: 'VIEW:ROTINAS' },
+    { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true },
     { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera, permission: 'VIEW:CFTV' },
-    { path: "/auditoria", label: "AUDITORIA", icon: Shield, permission: 'VIEW:AUDITORIA' },
+    { path: "/auditoria", label: "AUDITORIA", icon: Shield },
   ];
 
   return (
