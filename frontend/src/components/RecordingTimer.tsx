@@ -49,10 +49,11 @@ export function RecordingTimer({ createdAt, initialHours, deactivatedAt, isActiv
 
             if (!isActive && deactivatedAt) {
                 // Lógica de congelamento (usa initialDurationMs calculado com horas)
-                const deactivationDate = new Date(deactivatedAt);
+                const deactivationDate = new Date(deactivatedAt); // Declaração única
+
                 // Correção: O tempo gravado deve ser contado a partir da data de criação da câmera
                 // até a data de desativação, somado ao tempo inicial.
-                const deactivationDate = new Date(deactivatedAt);
+
                 if (!isNaN(deactivationDate.getTime()) && deactivationDate >= registrationDate) {
                     const timeSinceRegistrationUntilDeactivation = deactivationDate.getTime() - registrationDate.getTime();
                     totalTimeMs = initialDurationMs + timeSinceRegistrationUntilDeactivation;
