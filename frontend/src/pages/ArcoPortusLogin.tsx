@@ -177,10 +177,13 @@ const ArcoPortusLogin = () => {
         <div className="flex flex-col items-center space-y-2">
           <div className="text-white/80 text-xs sm:text-sm">
             <img src={logoArco} alt="" className="w-20 mx-auto pb-2" />
-            <p>© 2342_V02 Arco Security I Academy I Solutions - Todos os direitos reservados.</p>
+            <p>© 3111_V02 Arco Security I Academy I Solutions - Todos os direitos reservados.</p>
           </div>
         </div>
       </div>
+
+
+
 
       {isForgotModalOpen && (
         <ForgotPasswordModal
