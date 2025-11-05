@@ -27,31 +27,31 @@ export class AuthController {
             // --- FIM DA CORREÇÃO ---
 
 
-	            // --- VERIFICAÇÃO DE SERVIÇO (Correção #9) ---
-	            // O CGA deve retornar um array de strings em `services`.
-	            const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
-	
-	            if (!hasArcoPortusService) {
-	
-	                logAction({
-	                    action: 'LOGIN_UNAUTHORIZED_SERVICE',
-	                    module: 'AUTH',
-	                    target: email,
-	                    details: `Login falhou: Usuário "${email}" autenticado, mas não possui o serviço "Arco Portus" associado no CGA.`,
-	                    severity: LogSeverity.MEDIA,
-	                    user: {
-	                        userId: userData.userId || 'N/A',
-	                        name: userData.name || `Tentativa (${email})`,
-	                        company: userData.company || { id: 'N/A', name: 'N/A' },
-	                        role: userData.role || 'N/A',
-	                        permissions: [],
-	                    },
-	                });
-	
-	                // Retorna 403 Forbidden (Proibido)
-	                return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
-	            }
-	            // --- FIM DA VERIFICAÇÃO ---
+            // --- VERIFICAÇÃO DE SERVIÇO (Correção #9) ---
+            // O CGA deve retornar um array de strings em `services`.
+            const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
+
+            if (!hasArcoPortusService) {
+
+                logAction({
+                    action: 'LOGIN_UNAUTHORIZED_SERVICE',
+                    module: 'AUTH',
+                    target: email,
+                    details: `Login falhou: Usuário "${email}" autenticado, mas não possui o serviço "Arco Portus" associado no CGA.`,
+                    severity: LogSeverity.MEDIA,
+                    user: {
+                        userId: userData.userId || 'N/A',
+                        name: userData.name || `Tentativa (${email})`,
+                        company: userData.company || { id: 'N/A', name: 'N/A' },
+                        role: userData.role || 'N/A',
+                        permissions: [],
+                    },
+                });
+
+                // Retorna 403 Forbidden (Proibido)
+                return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
+            }
+            // --- FIM DA VERIFICAÇÃO ---
 
             // Se passou, geramos o token
             const token = jwt.sign(
