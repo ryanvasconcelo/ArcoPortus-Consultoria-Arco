@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { User, Building2, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +83,7 @@ export function UserProfileCard({ user, onLogout }: UserProfileCardProps) {
             <span className="text-sm">{user.company}</span>
           </div>
 
+          {/* ✅ CORREÇÃO #1: Badge de role SEMPRE VISÍVEL (removido hover) */}
           <div className="flex items-center gap-2">
             <Badge className={`${roleColors[user.role as keyof typeof roleColors]} text-white border-0 text-xs`}>
               {roleLabels[user.role as keyof typeof roleLabels]}

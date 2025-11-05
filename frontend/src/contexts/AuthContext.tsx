@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import { api, setupInterceptors } from '../services/api';
-import cgaApi from '../services/cgaApi';  // API para autenticação via CGA
+import cgaApi from '../services/cgaApi';
+import { toast } from 'sonner';
 
 interface User {
     name: string;
@@ -13,7 +14,7 @@ interface User {
         id: string;
         name: string;
     };
-    permissions: string[]; // Correção #8: Adicionar permissões
+    permissions: string[];
 }
 
 interface AuthContextData {
@@ -43,12 +44,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
     const navigate = useNavigate();
 
-    const signOut = useCallback(() => {
+    // ✅ CORREÇÃO #13: Logout com mensagem
+    const signOut = useCallback((showMessage = false) => {
         localStorage.removeItem('@ArcoPortus:user');
         localStorage.removeItem('@ArcoPortus:token');
 
         setUser(null);
         setToken('');
+
+        if (showMessage) {
+            toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+        }
 
         navigate('/login');
     }, [navigate]);
@@ -59,42 +65,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     }, []);
 
+    // ✅ CORREÇÃO #5 e #12: Renovação de token
     const refreshToken = useCallback(async () => {
         try {
-            // Endpoint de refresh de token (precisa ser criado no backend)
             const response = await api.post('/auth/refresh-token');
             const { token: newToken } = response.data;
             handleTokenUpdate(newToken);
+            console.log('✅ Token renovado com sucesso');
             return newToken;
         } catch (error) {
-            console.error('Erro ao renovar token:', error);
-            signOut(); // Força logout em caso de falha na renovação
+            console.error('❌ Erro ao renovar token:', error);
+            signOut(true);
             throw error;
         }
     }, [handleTokenUpdate, signOut]);
 
-    // Correção #15: Persistência de dados após reload
+    // ✅ CORREÇÃO #15: Persistência de dados após reload
     useEffect(() => {
         const storagedUser = localStorage.getItem('@ArcoPortus:user');
         const storagedToken = localStorage.getItem('@ArcoPortus:token');
 
         if (storagedToken && storagedUser) {
-            setUser(JSON.parse(storagedUser));
-            handleTokenUpdate(storagedToken);
+            try {
+                // Validar se o token ainda é válido
+                const decoded: { exp: number } = jwtDecode(storagedToken);
+                const now = Date.now() / 1000;
+
+                if (decoded.exp > now) {
+                    setUser(JSON.parse(storagedUser));
+                    handleTokenUpdate(storagedToken);
+                    console.log('✅ Sessão restaurada do localStorage');
+                } else {
+                    console.log('⚠️ Token expirado no localStorage. Limpando...');
+                    localStorage.removeItem('@ArcoPortus:user');
+                    localStorage.removeItem('@ArcoPortus:token');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao restaurar sessão:', error);
+                localStorage.removeItem('@ArcoPortus:user');
+                localStorage.removeItem('@ArcoPortus:token');
+            }
         }
 
         setLoading(false);
         setIsInitialized(true);
     }, [handleTokenUpdate]);
 
-    // Correção #5 e #12: Renovação automática de token e interceptor
+    // ✅ CORREÇÃO #5, #12, #13: Setup dos interceptors após inicialização
     useEffect(() => {
         if (isInitialized) {
             setupInterceptors(signOut, refreshToken);
         }
     }, [isInitialized, signOut, refreshToken]);
 
-    // Correção #13: Logout automático após expiração (fallback)
+    // ✅ CORREÇÃO #13: Verificação periódica de expiração (fallback)
     useEffect(() => {
         if (!token) return;
 
@@ -104,20 +128,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const expirationTime = decodedToken.exp * 1000;
                 const now = Date.now();
                 const timeUntilExpiration = expirationTime - now;
-                const refreshThreshold = 5 * 60 * 1000; // 5 minutos antes de expirar
+                const refreshThreshold = 5 * 60 * 1000; // 5 minutos
 
                 if (timeUntilExpiration < refreshThreshold && timeUntilExpiration > 0) {
-                    console.log('Token próximo de expirar. Renovando automaticamente...');
-                    refreshToken();
+                    console.log('⚠️ Token próximo de expirar. Renovando...');
+                    refreshToken().catch(() => {
+                        console.error('❌ Falha ao renovar token automaticamente');
+                    });
                 } else if (timeUntilExpiration <= 0) {
-                    console.log('Token expirado. Fazendo logout automático...');
-                    signOut();
+                    console.log('❌ Token expirado. Fazendo logout...');
+                    signOut(true);
                 }
             } catch (error) {
-                console.error('Erro ao decodificar token:', error);
-                signOut();
+                console.error('❌ Erro ao verificar expiração do token:', error);
+                signOut(true);
             }
         };
+
+        // Verifica imediatamente
+        checkTokenExpiration();
 
         // Verifica a cada 1 minuto
         const interval = setInterval(checkTokenExpiration, 60 * 1000);
@@ -126,29 +155,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [token, signOut, refreshToken]);
 
     async function signIn({ email, password }: SignInCredentials) {
-        const response = await cgaApi.post('/api/internal/auth/portus-login', { email, password });
-        const { token: apiToken, user: apiUser, permissions: apiPermissions } = response.data;
+        try {
+            const response = await cgaApi.post('/api/internal/auth/portus-login', { email, password });
+            const { token: apiToken, user: apiUser } = response.data;
 
-        // O objeto user retornado pelo backend precisa ser enriquecido com as permissões
-        // que estão no token, mas não são retornadas no objeto user.
-        // Vamos decodificar o token para obter as permissões e o userId.
-        const decodedToken: { userId: string, permissions: string[] } = jwtDecode(apiToken);
+            const decodedToken: { userId: string, permissions: string[], company: any } = jwtDecode(apiToken);
 
-        const fullUser = {
-            ...apiUser,
-            permissions: decodedToken.permissions || [],
-            userId: decodedToken.userId, // Adicionar userId para uso futuro
-        };
+            const fullUser = {
+                ...apiUser,
+                permissions: decodedToken.permissions || [],
+                company: decodedToken.company || apiUser.company,
+                userId: decodedToken.userId,
+            };
 
-        localStorage.setItem('@ArcoPortus:user', JSON.stringify(fullUser));
-        handleTokenUpdate(apiToken);
+            localStorage.setItem('@ArcoPortus:user', JSON.stringify(fullUser));
+            handleTokenUpdate(apiToken);
 
-        setUser(fullUser);
+            setUser(fullUser);
+
+            console.log('✅ Login realizado com sucesso');
+        } catch (error: any) {
+            console.error('❌ Erro no login:', error);
+            if (error.response?.status === 403) {
+                toast.error('Você não tem permissão para acessar este serviço.');
+            }
+            throw error;
+        }
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, signIn, signOut, refreshToken }}>
-            {isInitialized ? children : <div>Carregando...</div>}
+        <AuthContext.Provider value={{ user, token, loading, signIn, signOut: () => signOut(false), refreshToken }}>
+            {isInitialized ? children : <div className="flex items-center justify-center h-screen">Carregando...</div>}
         </AuthContext.Provider>
     );
 }
