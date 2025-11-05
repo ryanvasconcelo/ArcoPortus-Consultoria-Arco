@@ -182,7 +182,6 @@ const ArcoPortusLogin = () => {
         </div>
       </div>
 
-      {/* Modal Esqueci Senha */}
       {isForgotModalOpen && (
         <ForgotPasswordModal
           onClose={() => setIsForgotModalOpen(false)}
