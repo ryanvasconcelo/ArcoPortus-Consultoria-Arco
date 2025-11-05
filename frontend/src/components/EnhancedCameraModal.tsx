@@ -58,6 +58,7 @@ export function EnhancedCameraModal({ editData, onClose, onSubmit }: EnhancedCam
 
   const isEditing = !!editData;
 
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <Card className="w-full max-w-2xl glass-card border-white/10 animate-scale-in">
