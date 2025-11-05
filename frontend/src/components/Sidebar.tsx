@@ -25,11 +25,11 @@ const Sidebar = () => {
   const menuItems = [
     // Correção #8: Adicionar permissões
     { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true, permission: 'VIEW:ARESP' },
-    { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText, permission: 'VIEW:EAR' },
-    { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText, permission: 'VIEW:NORMAS' },
-    { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText, permission: 'VIEW:DOCUMENTOS' },
+    { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText, permission: 'VIEW:DIAGNOSTIC' },
+    { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText, permission: 'VIEW:NORMS' },
+    { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText, permission: 'VIEW:REGISTERS' },
     { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true, permission: 'VIEW:OCORRENCIAS' },
-    { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLACAO' },
+    { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLATION' },
     { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true, permission: 'VIEW:ROTINAS' },
     { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera, permission: 'VIEW:CFTV' },
     { path: "/auditoria", label: "AUDITORIA", icon: Shield, permission: 'VIEW:AUDITORIA' },
@@ -67,14 +67,16 @@ const Sidebar = () => {
 
           <div className="pt-4 space-y-3">
             <div className="bg-muted p-4 rounded-lg">
-              <Button
-                className="w-full bg-secondary text-white hover:bg-secondary/90 flex-col h-auto py-3"
-                onClick={() => navigate("/dashboard")}
-              >
-                <BarChart3 className="h-4 w-4 mb-1" />
-                <span className="text-xs">Dashboards</span>
-                <span className="text-xs">Acessar</span>
-              </Button>
+              {hasPermission('VIEW:DASHBOARDS') && (
+                <Button
+                  className="w-full bg-secondary text-white hover:bg-secondary/90 flex-col h-auto py-3"
+                  onClick={() => navigate("/dashboard")}
+                >
+                  <BarChart3 className="h-4 w-4 mb-1" />
+                  <span className="text-xs">Dashboards</span>
+                  <span className="text-xs">Acessar</span>
+                </Button>
+              )}
             </div>
             <div
               className="bg-muted p-4 rounded-lg text-center cursor-pointer hover:bg-muted/80 transition-colors"

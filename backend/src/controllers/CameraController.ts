@@ -442,7 +442,23 @@ export class CameraController {
             if (data.length < 2) { await cleanupFile(); return res.status(400).json({ message: 'Planilha vazia.' }); }
 
             const headers = data[0] as string[];
-            const headerMap: { [key: string]: string } = { 'nº câmera': 'name', 'local de instalação': 'location', 'em funcionamento ?': 'isActive', 'ip': 'ipAddress', 'modelo': 'model', 'fabricante': 'fabricante', 'unidade de negócio': 'businessUnit', 'tipo': 'type', 'área externa / interna': 'area', 'possui analítico?': 'hasAnalytics', 'dias gravados': 'recordingTime', 'dias de gravação': 'recordingTime', 'horas de gravação': 'recordingTime' };
+            // Corrigindo o mapeamento de headers para ser mais robusto
+            const headerMap: { [key: string]: string } = {
+                'nº câmera': 'name',
+                'local de instalação': 'location',
+                'em funcionamento ?': 'isActive',
+                'ip': 'ipAddress',
+                'modelo': 'model',
+                'fabricante': 'fabricante',
+                'unidade de negócio': 'businessUnit',
+                'tipo': 'type',
+                'área externa / interna': 'area',
+                'possui analítico?': 'hasAnalytics',
+                'dias gravados': 'recordingTime',
+                'dias de gravação': 'recordingTime',
+                'horas de gravação': 'recordingTime',
+                'horas de gravação (número)': 'recordingTime', // Adicionando o header do template
+            };
             const indices: { [key: string]: number } = {};
             let nameIndex = -1;
             let timeHeaderIndex = -1;
@@ -484,8 +500,9 @@ export class CameraController {
                         isActive: isActiveValue,
                     };
 
+                    // Correção: A chave de identificação deve ser apenas o 'Nº Câmera' (name)
                     const existingCamera = await prisma.camera.findFirst({
-                        where: { companyId: companyId, name: cameraName, location: cameraDataForDb.location }
+                        where: { companyId: companyId, name: cameraName }
                     });
 
                     if (existingCamera) {
