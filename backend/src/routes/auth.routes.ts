@@ -7,6 +7,7 @@ const authController = new AuthController();
 
 // Rota pública para o login inicial
 authRoutes.post('/login', authController.login);
+authRoutes.post('/refresh-token', authController.refreshToken);
 
 // Rota protegida para forçar a troca de senha
 // Esta é a rota que está faltando

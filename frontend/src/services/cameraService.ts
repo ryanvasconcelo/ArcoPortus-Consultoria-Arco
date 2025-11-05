@@ -28,7 +28,7 @@ interface ImportResult {
 }
 
 // Interface para o resultado da exclusão em massa
-interface DeleteAllResult {
+interface DeleteManyResult {
     message: string;
     count: number;
 }
@@ -61,10 +61,14 @@ export const cameraService = {
         });
         return response.data;
     },
-    // --- NOSSO ÚLTIMO ATO: FUNÇÃO PARA CHAMAR O DELETE ALL ---
-    async deleteAllCameras(): Promise<DeleteAllResult> {
-        // Chama o novo endpoint que criamos
-        const response = await api.delete<DeleteAllResult>('/api/cameras/all');
+    // Correção #11: Exclusão em massa
+    async deleteManyCameras(ids: string[]): Promise<DeleteManyResult> {
+        const response = await api.post<DeleteManyResult>('/api/cameras/delete-many', { ids });
         return response.data;
     },
+
+    // Correção #6: Download do template (não precisa de lógica aqui, apenas a chamada)
+    // A função de download está no SistemaCFTV.tsx e usa o `api` diretamente.
+    // Manter a interface de serviço limpa.
+
 };

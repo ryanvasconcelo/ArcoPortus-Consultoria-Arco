@@ -16,7 +16,7 @@ cameraRoutes.get('/:id', ensureAuthenticated, cameraController.show); // Mantenh
 cameraRoutes.post('/', ensureAuthenticated, cameraController.create); // Assumindo 'createCamera'
 cameraRoutes.patch('/:id', ensureAuthenticated, cameraController.update); // Assumindo 'updateCamera'
 // --- Linha 14 Corrigida ---
-cameraRoutes.delete('/:id', ensureAuthenticated, cameraController.delete); // <-- Usar 'deleteCamera' ou o nome correto
+cameraRoutes.delete('/:id', ensureAuthenticated, cameraController.delete);
 
 // Rota de Importação
 cameraRoutes.post(
@@ -26,19 +26,25 @@ cameraRoutes.post(
     cameraController.importFromXLSX
 );
 
-// Rota de Exportação
+// Rota de Download do Template (Correção #6)
+cameraRoutes.get(
+    '/template',
+    ensureAuthenticated,
+    cameraController.downloadTemplate
+);
+
+// Rota de Exportação (Correção #10)
 cameraRoutes.get(
     '/export',
     ensureAuthenticated,
-    cameraController.exportToXLSX
+    cameraController.exportCameras // Novo método
 );
 
-// --- NOVA ROTA DE EXCLUSÃO EM MASSA ---
-// Deve vir ANTES de '/:id' para que 'all' não seja tratado como um ID
+// Rota de Exclusão em Massa (Correção #11)
 cameraRoutes.delete(
-    '/all', // Rota: DELETE /api/cameras/all
+    '/many', // Rota: DELETE /api/cameras/many
     ensureAuthenticated,
-    cameraController.deleteAllCameras // Novo método
+    cameraController.deleteMany
 );
 
 cameraRoutes.delete('/:id', ensureAuthenticated, cameraController.delete); // Rota de delete individual

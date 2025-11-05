@@ -9,21 +9,30 @@ import {
   Shield
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Função auxiliar para verificar permissão
+  const hasPermission = (requiredPermission: string) => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(requiredPermission);
+  };
 
   const menuItems = [
-    { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true },
-    { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText },
-    { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText },
-    { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText },
-    { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true },
-    { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText },
-    { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true },
-    { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera },
-    { path: "/auditoria", label: "AUDITORIA", icon: Shield },
+    // Correção #8: Adicionar permissões
+    { path: "https://app.accia.com.br/site/login", label: "ARESP", icon: ClipboardCheck, external: true, permission: 'VIEW:ARESP' },
+    { path: "/diagnostico-ear", label: "DIAGNÓSTICO DO EAR", icon: FileText, permission: 'VIEW:EAR' },
+    { path: "/normas-procedimentos", label: "NORMAS E PROCEDIMENTOS", icon: FileText, permission: 'VIEW:NORMAS' },
+    { path: "/documentos-registros", label: "DOCUMENTOS E REGISTROS", icon: FileText, permission: 'VIEW:DOCUMENTOS' },
+    { path: "https://app.accia.com.br/site/login", label: "GESTÃO DE OCORRENCIAS", icon: FileText, external: true, permission: 'VIEW:OCORRENCIAS' },
+    { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLACAO' },
+    { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true, permission: 'VIEW:ROTINAS' },
+    { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera, permission: 'VIEW:CFTV' },
+    { path: "/auditoria", label: "AUDITORIA", icon: Shield, permission: 'VIEW:AUDITORIA' },
   ];
 
   return (
@@ -31,6 +40,11 @@ const Sidebar = () => {
       <Card className="glass-card">
         <CardContent className="p-4 space-y-3">
           {menuItems.map((item) => {
+            // Correção #8: Ocultar item se o usuário não tiver a permissão necessária
+            if (item.permission && !hasPermission(item.permission)) {
+              return null;
+            }
+
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 

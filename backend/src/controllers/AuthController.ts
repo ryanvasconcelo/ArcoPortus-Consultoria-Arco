@@ -27,8 +27,11 @@ export class AuthController {
             // --- FIM DA CORREÇÃO ---
 
 
-            // --- VERIFICAÇÃO DE SERVIÇO ---
-            if (!userData.services || !userData.services.includes('Arco Portus')) {
+            // --- VERIFICAÇÃO DE SERVIÇO (Correção #9) ---
+            // O CGA deve retornar um array de strings em `services`.
+            const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
+
+            if (!hasArcoPortusService) {
 
                 logAction({
                     action: 'LOGIN_UNAUTHORIZED_SERVICE',
@@ -109,6 +112,61 @@ export class AuthController {
             // ou outro erro interno.
             console.error('Login error:', error);
             return res.status(500).json({ message: 'Internal server error.' });
+        }
+    }
+
+    public async refreshToken(req: Request, res: Response): Promise<Response> {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+            return res.status(401).json({ message: 'Token is missing' });
+        }
+
+        const [, token] = authHeader.split(' ');
+
+        try {
+            const decoded = jwt.verify(token, process.env.ARCO_PORTUS_JWT_SECRET as string) as { sub: string, userId: string, name: string, company: any, role: string, permissions: string[] };
+
+            // O token é válido, mas pode estar expirado. Vamos gerar um novo.
+            // Para garantir que o usuário ainda tem acesso, podemos fazer uma chamada leve ao CGA.
+            // No entanto, para o refresh ser rápido, vamos confiar no token existente
+            // e apenas estender a validade, a menos que o token seja inválido.
+
+            // 1. Decodificar o token para obter os dados do usuário
+            const userData = {
+                userId: decoded.userId,
+                name: decoded.name,
+                company: decoded.company,
+                role: decoded.role,
+                permissions: decoded.permissions,
+            };
+
+            // 2. Gerar um novo token com nova expiração
+            const newToken = jwt.sign(
+                userData,
+                process.env.ARCO_PORTUS_JWT_SECRET as string,
+                {
+                    subject: userData.userId,
+                    expiresIn: '30m', // 30 minutos de validade
+                }
+            );
+
+            logAction({
+                action: 'TOKEN_REFRESH',
+                module: 'AUTH',
+                target: userData.name,
+                details: `Token renovado para o usuário ${userData.name}.`,
+                severity: LogSeverity.BAIXA,
+                user: userData,
+            });
+
+            return res.status(200).json({ token: newToken });
+
+        } catch (error) {
+            // Se o token for inválido (incluindo se estiver expirado), o verify falha.
+            // Retornamos 401 para que o frontend faça o logout.
+            console.error('Refresh token error:', error);
+            return res.status(401).json({ message: 'Invalid or expired token for refresh.' });
         }
     }
 

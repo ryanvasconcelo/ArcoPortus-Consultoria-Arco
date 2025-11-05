@@ -16,7 +16,7 @@ import { EnhancedCameraModal } from "@/components/EnhancedCameraModal";
 import { AddCameraModal } from "@/components/AddCameraModal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { InstructionsModal } from "@/components/InstructionsModal";
-import api from "@/services/api";
+import { api } from "@/services/api";
 
 
 const ITEMS_PER_PAGE = 7;
@@ -36,8 +36,29 @@ const SistemaCFTV = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState("");
-  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isDeleteManyOpen, setIsDeleteManyOpen] = useState(false);
+  const [isDeletingMany, setIsDeletingMany] = useState(false);
+  const [selectedCameras, setSelectedCameras] = useState<string[]>([]); // Para exclusão em massa
+
+  // Lógica de seleção
+  const handleSelectCamera = (id: string, isChecked: boolean) => {
+    setSelectedCameras(prev => {
+      if (isChecked) {
+        return [...prev, id];
+      } else {
+        return prev.filter(cameraId => cameraId !== id);
+      }
+    });
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = paginatedCameras.map(camera => camera.id);
+      setSelectedCameras(allIds);
+    } else {
+      setSelectedCameras([]);
+    }
+  };
 
   const fetchCameras = async () => {
     setIsLoading(true);
@@ -98,19 +119,21 @@ const SistemaCFTV = () => {
     }
   };
 
-  const handleDeleteAllCameras = async () => {
-    setIsDeletingAll(true);
+  const handleDeleteManyCameras = async () => {
+    setIsDeletingMany(true);
     try {
-      const result = await cameraService.deleteAllCameras();
+      // Correção #11: Usar o novo endpoint de exclusão em massa
+      const result = await cameraService.deleteManyCameras(selectedCameras);
       toast({ title: "Exclusão em Massa Concluída", description: result.message || `${result.count} câmeras foram excluídas.` });
-      setIsDeleteAllOpen(false);
+      setIsDeleteManyOpen(false);
+      setSelectedCameras([]);
       await fetchCameras();
     } catch (error: any) {
-      console.error("Falha ao excluir todas as câmeras:", error);
+      console.error("Falha ao excluir câmeras em massa:", error);
       const serverMessage = error.response?.data?.message || "Não foi possível excluir as câmeras.";
       toast({ title: "Erro na Exclusão", description: serverMessage, variant: "destructive" });
     } finally {
-      setIsDeletingAll(false);
+      setIsDeletingMany(false);
     }
   };
 
@@ -148,9 +171,30 @@ const SistemaCFTV = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
       toast({ title: "Exportação Concluída", description: "O arquivo de câmeras foi baixado." });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Falha na exportação:", error);
-      toast({ title: "Erro na Exportação", description: "Não foi possível gerar o arquivo.", variant: "destructive" });
+      const serverMessage = error.response?.data?.message || "Não foi possível gerar o arquivo.";
+      toast({ title: "Erro na Exportação", description: serverMessage, variant: "destructive" });
+    }
+  };
+
+  // Correção #6: Download do Template
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/api/cameras/template', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'template_importacao_cameras.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Download Concluído", description: "O template de importação foi baixado." });
+    } catch (error: any) {
+      console.error("Falha no download do template:", error);
+      const serverMessage = error.response?.data?.message || "Não foi possível baixar o template.";
+      toast({ title: "Erro no Download", description: serverMessage, variant: "destructive" });
     }
   };
 
@@ -263,11 +307,11 @@ const SistemaCFTV = () => {
                       <Button variant="outline" onClick={handleExport} className="flex-1">
                         <Download className="h-4 w-4 mr-2" />Exportar
                       </Button>
-                      <Button variant="outline" onClick={() => setIsInstructionsOpen(true)} className="flex-1">
-                        <FileSpreadsheet className="h-4 w-4 mr-2" />Modelo
+                      <Button variant="outline" onClick={handleDownloadTemplate} className="flex-1">
+                        <Download className="h-4 w-4 mr-2" />Template
                       </Button>
-                      <Button variant="destructive" onClick={() => setIsDeleteAllOpen(true)} className="flex-1" disabled={cameras.length === 0}>
-                        <Trash2 className="h-4 w-4 mr-2" />Excluir Todas
+                      <Button variant="destructive" onClick={() => setIsDeleteManyOpen(true)} className="flex-1" disabled={selectedCameras.length === 0}>
+                        <Trash2 className="h-4 w-4 mr-2" />Excluir Selecionadas ({selectedCameras.length})
                       </Button>
                     </div>
                   </div>
@@ -283,6 +327,14 @@ const SistemaCFTV = () => {
                         <table className="w-full min-w-[500px]">
                           <thead className="bg-muted/50">
                             <tr>
+                              <th className="text-center p-2 sm:p-4 font-medium text-xs sm:text-sm w-10">
+                                <input
+                                  type="checkbox"
+                                  className="form-checkbox h-4 w-4 text-primary rounded"
+                                  checked={selectedCameras.length === paginatedCameras.length && paginatedCameras.length > 0}
+                                  onChange={handleSelectAll}
+                                />
+                              </th>
                               <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm">Nº Câmera</th>
                               <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm">Local</th>
                               <th className="text-center p-2 sm:p-4 font-medium text-xs sm:text-sm">Unidade</th>
@@ -292,17 +344,26 @@ const SistemaCFTV = () => {
                           <tbody>
                             {paginatedCameras.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="text-center py-10 text-muted-foreground">
+                                <td colSpan={5} className="text-center py-10 text-muted-foreground">
                                   Nenhuma câmera encontrada{searchTerm ? ` para "${searchTerm}"` : ''}{statusFilter !== 'all' ? ` com status "${statusFilter}"` : ''}.
                                 </td>
                               </tr>
                             ) : (
                               paginatedCameras.map((camera) => (
-                                <tr key={camera.id} className={`border-t cursor-pointer hover:bg-muted/40 transition-colors ${selectedCamera?.id === camera.id ? 'bg-secondary/10' : ''}`} onClick={() => setSelectedCamera(camera)}>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm font-medium">{camera.name}</td>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-xs">{camera.location || '-'}</td>
-                                  <td className="p-2 sm:p-4 text-xs sm:text-sm text-center">{camera.businessUnit || '-'}</td>
+                                <tr key={camera.id} className={`border-t cursor-pointer hover:bg-muted/40 transition-colors ${selectedCameras.includes(camera.id) ? 'bg-secondary/10' : ''}`} onClick={() => setSelectedCamera(camera)}>
                                   <td className="p-2 sm:p-4 text-center">
+                                    <input
+                                      type="checkbox"
+                                      className="form-checkbox h-4 w-4 text-primary rounded"
+                                      checked={selectedCameras.includes(camera.id)}
+                                      onChange={(e) => handleSelectCamera(camera.id, e.target.checked)}
+                                      onClick={(e) => e.stopPropagation()} // Evita que o clique na linha deselecione
+                                    />
+                                  </td>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm font-medium" onClick={() => setSelectedCamera(camera)}>{camera.name}</td>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-xs" onClick={() => setSelectedCamera(camera)}>{camera.location || '-'}</td>
+                                  <td className="p-2 sm:p-4 text-xs sm:text-sm text-center" onClick={() => setSelectedCamera(camera)}>{camera.businessUnit || '-'}</td>
+                                  <td className="p-2 sm:p-4 text-center" onClick={() => setSelectedCamera(camera)}>
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] whitespace-nowrap ${camera.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                       {camera.isActive ? 'Operacional' : 'Inativa'}
                                     </span>
@@ -434,10 +495,10 @@ const SistemaCFTV = () => {
         </InstructionsModal>
 
         <ConfirmationModal
-          isOpen={isDeleteAllOpen}
-          onClose={() => setIsDeleteAllOpen(false)}
-          onConfirm={handleDeleteAllCameras}
-          title="Confirmar Exclusão em Massa"
+          isOpen={isDeleteManyOpen}
+          onClose={() => setIsDeleteManyOpen(false)}
+          onConfirm={handleDeleteManyCameras}
+          title={`Confirmar Exclusão de ${selectedCameras.length} Câmera(s)`}
           message={
             <>
               <div className="flex items-center justify-center mb-4">
@@ -445,12 +506,12 @@ const SistemaCFTV = () => {
               </div>
               <p className="text-lg font-bold text-center text-destructive">AÇÃO IRREVERSÍVEL!</p>
               <p className="text-sm text-muted-foreground mt-2 text-center">
-                Você tem certeza que deseja excluir <strong>TODAS as {statusData.total} câmeras</strong> da sua empresa?
+                Você tem certeza que deseja excluir as <strong>{selectedCameras.length} câmeras selecionadas</strong>?
               </p>
               <p className="text-xs text-muted-foreground mt-4 text-center">Esta ação não pode ser desfeita.</p>
             </>
           }
-          isLoading={isDeletingAll}
+          isLoading={isDeletingMany}
           confirmButtonVariant="destructive"
         />
       </div>

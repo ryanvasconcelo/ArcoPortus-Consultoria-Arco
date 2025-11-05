@@ -26,6 +26,7 @@ export function EnhancedCameraModal({ editData, onClose, onSubmit }: EnhancedCam
     area: "",
     hasAnalytics: false,
     isActive: true,
+    recordingHours: 0, // Correção #4: Adicionar campo de tempo de gravação (em horas)
   });
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function EnhancedCameraModal({ editData, onClose, onSubmit }: EnhancedCam
         area: editData.area || "",
         hasAnalytics: editData.hasAnalytics || false,
         isActive: editData.isActive,
+        recordingHours: editData.recordingHours || 0, // Correção #4: Carregar tempo de gravação
       });
     }
   }, [editData]);
@@ -78,6 +80,7 @@ export function EnhancedCameraModal({ editData, onClose, onSubmit }: EnhancedCam
               <div className="space-y-2"><Label htmlFor="fabricante">Fabricante</Label><Input id="fabricante" value={formData.fabricante} onChange={(e) => handleChange("fabricante", e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="businessUnit">Unidade de Negócio</Label><Input id="businessUnit" value={formData.businessUnit} onChange={(e) => handleChange("businessUnit", e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="type">Tipo</Label><Input id="type" value={formData.type} onChange={(e) => handleChange("type", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="recordingHours">Tempo de Gravação (Horas)</Label><Input id="recordingHours" type="number" value={formData.recordingHours} onChange={(e) => handleChange("recordingHours", e.target.value)} min="0" /></div>
               <div className="space-y-2"><Label htmlFor="area">Área</Label>
                 <Select value={formData.area || ""} onValueChange={(value) => handleChange("area", value)}>
                   <SelectTrigger><SelectValue placeholder="Selecione a área..." /></SelectTrigger>
@@ -87,7 +90,7 @@ export function EnhancedCameraModal({ editData, onClose, onSubmit }: EnhancedCam
             </div>
             <div className="flex items-center space-x-4 pt-4">
               <div className="flex items-center space-x-2"><Switch id="hasAnalytics" checked={formData.hasAnalytics} onCheckedChange={(checked) => handleChange("hasAnalytics", checked)} /><Label htmlFor="hasAnalytics">Possui Analítico?</Label></div>
-              <div className="flex items-center space-x-2"><Switch id="isActive" checked={formData.isActive} onCheckedChange={(checked) => handleChange("isActive", checked)} /><Label htmlFor="isActive">Operacional?</Label></div>
+              <div className="flex items-center space-x-2"><Switch id="isActive" checked={formData.isActive} onCheckedChange={(checked) => handleChange("isActive", checked)} /><Label htmlFor="isActive">Ativa/Inativa (Correção #3)</Label></div>
             </div>
             <div className="flex gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>

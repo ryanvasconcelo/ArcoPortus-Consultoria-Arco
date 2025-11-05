@@ -6,7 +6,8 @@ import {
   FileText,
   Camera,
   ClipboardCheck,
-  GraduationCap
+  GraduationCap,
+  Scale
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -60,6 +61,12 @@ const GestaoArquivos = () => {
       external: true
     },
     {
+      path: "/auditoria",
+      label: "AUDITORIA",
+      icon: Scale,
+      color: "from-yellow-500/20 to-yellow-600/20"
+    },
+    {
       path: "/sistema-cftv",
       label: "SISTEMA DE CFTV",
       icon: Camera,
@@ -108,25 +115,6 @@ const GestaoArquivos = () => {
                   </Card>
                 );
               })}
-
-              <Card
-                className="cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 border-2 border-border/50"
-                onClick={() =>
-                  window.open("https://unicasp.woli.com.br/pt-BR/Login/Index?returnUrl=%2F", "_blank")
-                }
-              >
-                <CardContent className="p-8 text-center">
-                  <div className="mb-4 flex justify-center">
-                    <div className="p-4 bg-secondary/10 rounded-full">
-                      <GraduationCap className="h-10 w-10 text-secondary" />
-                    </div>
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">TREINAMENTOS</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Acesse cursos e capacitações
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

@@ -196,6 +196,197 @@ export class CameraController {
         }
     }
 
+    public async deleteMany(req: Request, res: Response): Promise<Response> {
+        try {
+            const { user } = req;
+            const { ids } = req.body; // Espera um array de IDs no corpo da requisição
+
+            // ✅ REGRA "CHAVE DUPLA" APLICADA
+            const actionPermission = 'DELETE:DOCUMENTS';
+            const viewPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(actionPermission) || !user.permissions.includes(viewPermission)) {
+                return res.status(403).json({ message: 'Acesso negado. Permissão de exclusão e acesso ao módulo CFTV são necessárias.' });
+            }
+
+            if (!Array.isArray(ids) || ids.length === 0) {
+                return res.status(400).json({ message: 'Nenhum ID de câmera fornecido para exclusão.' });
+            }
+
+            // 1. Verificar se todas as câmeras pertencem à empresa do usuário
+            const camerasToDelete = await prisma.camera.findMany({
+                where: {
+                    id: { in: ids },
+                    companyId: user.company.id
+                },
+                select: { id: true, name: true }
+            });
+
+            if (camerasToDelete.length !== ids.length) {
+                // Identificar quais IDs não foram encontrados ou não pertencem ao usuário
+                const foundIds = camerasToDelete.map(c => c.id);
+                const notFoundIds = ids.filter((id: string) => !foundIds.includes(id));
+                return res.status(404).json({ message: `Algumas câmeras não foram encontradas ou você não tem permissão para excluí-las. IDs não encontrados: ${notFoundIds.join(', ')}` });
+            }
+
+            // 2. Excluir em massa
+            const result = await prisma.camera.deleteMany({
+                where: {
+                    id: { in: ids },
+                    companyId: user.company.id
+                }
+            });
+
+            // 3. Logar a ação
+            logAction({
+                action: 'DELETE_MANY',
+                module: 'CFTV',
+                target: `Exclusão em massa de ${result.count} câmeras`,
+                details: `Exclusão em massa de ${result.count} câmeras. IDs: ${ids.join(', ')}`,
+                severity: LogSeverity.ALTA,
+                user: req.user,
+            });
+
+            return res.status(200).json({ message: `${result.count} câmeras excluídas com sucesso.` });
+
+        } catch (error) {
+            console.error('--- ERRO CRÍTICO em deleteMany cameras ---', error);
+            return res.status(500).json({ message: 'Erro interno do servidor ao excluir câmeras em massa.' });
+        }
+    }
+
+    public async downloadTemplate(req: Request, res: Response): Promise<Response> {
+        try {
+            const { user } = req;
+            const requiredPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(requiredPermission)) {
+                return res.status(403).json({ message: 'Acesso negado.' });
+            }
+
+            // 1. Definir o template de dados (Exemplo de estrutura)
+            const templateData = [
+                {
+                    'Nome da Câmera': 'Câmera 01 - Pátio',
+                    'Local de Instalação': 'Pátio Principal',
+                    'Endereço IP': '192.168.1.10',
+                    'Modelo': 'Hikvision DS-2CD2T47G2-L',
+                    'Fabricante': 'Hikvision',
+                    'Unidade de Negócio': 'Operações',
+                    'Tipo': 'Dome',
+                    'Área': 'Externa',
+                    'Ativa (Sim/Não)': 'Sim',
+                    'Horas de Gravação (Número)': 720,
+                    'Possui Analítico (Sim/Não)': 'Não',
+                },
+                {
+                    'Nome da Câmera': 'Câmera 02 - Entrada',
+                    'Local de Instalação': 'Portaria',
+                    'Endereço IP': '192.168.1.11',
+                    'Modelo': 'Intelbras VIP 7220',
+                    'Fabricante': 'Intelbras',
+                    'Unidade de Negócio': 'Segurança',
+                    'Tipo': 'Bullet',
+                    'Área': 'Interna',
+                    'Ativa (Sim/Não)': 'Sim',
+                    'Horas de Gravação (Número)': 360,
+                    'Possui Analítico (Sim/Não)': 'Sim',
+                },
+            ];
+
+            // 2. Criar o Workbook e a Worksheet
+            const workSheet = XLSX.utils.json_to_sheet(templateData);
+            const workBook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workBook, workSheet, 'Template');
+
+            // 3. Gerar o buffer do arquivo Excel
+            const excelBuffer = XLSX.write(workBook, { bookType: 'xlsx', type: 'buffer' });
+
+            // 4. Configurar a resposta HTTP
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=template_importacao_cameras.xlsx');
+
+            // 5. Logar a ação
+            logAction({
+                action: 'DOWNLOAD_TEMPLATE',
+                module: 'CFTV',
+                target: `Template de Importação de Câmeras`,
+                details: `Download do template de importação de câmeras.`,
+                severity: LogSeverity.BAIXA,
+                user: req.user,
+            });
+
+            return res.send(excelBuffer);
+
+        } catch (error) {
+            console.error('--- ERRO CRÍTICO em downloadTemplate ---', error);
+            return res.status(500).json({ message: 'Erro interno do servidor ao gerar template.' });
+        }
+    }
+
+    public async exportCameras(req: Request, res: Response): Promise<Response> {
+        try {
+            const { user } = req;
+            const requiredPermission = 'VIEW:CFTV';
+            if (!user.permissions.includes(requiredPermission)) {
+                return res.status(403).json({ message: 'Acesso negado.' });
+            }
+
+            const cameras = await prisma.camera.findMany({
+                where: { companyId: user.company.id },
+                orderBy: { name: 'asc' }
+            });
+
+            if (cameras.length === 0) {
+                return res.status(404).json({ message: 'Nenhuma câmera encontrada para exportação.' });
+            }
+
+            // 1. Preparar os dados para o Excel
+            const dataToExport = cameras.map(camera => ({
+                ID: camera.id,
+                Nome: camera.name,
+                Localização: camera.location,
+                'Endereço IP': camera.ipAddress,
+                Modelo: camera.model,
+                'Unidade de Negócio': camera.businessUnit,
+                Fabricante: camera.fabricante,
+                Tipo: camera.type,
+                Área: camera.area,
+                'Ativa': camera.isActive ? 'Sim' : 'Não',
+                'Horas de Gravação': camera.recordingHours,
+                'Possui Análise': camera.hasAnalytics ? 'Sim' : 'Não',
+                'Criado em': camera.createdAt.toISOString(),
+                'Atualizado em': camera.updatedAt.toISOString(),
+            }));
+
+            // 2. Criar o Workbook e a Worksheet
+            const workSheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workBook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workBook, workSheet, 'Cameras');
+
+            // 3. Gerar o buffer do arquivo Excel
+            const excelBuffer = XLSX.write(workBook, { bookType: 'xlsx', type: 'buffer' });
+
+            // 4. Configurar a resposta HTTP
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=cameras_export.xlsx');
+
+            // 5. Logar a ação
+            logAction({
+                action: 'EXPORT',
+                module: 'CFTV',
+                target: `Exportação de ${cameras.length} câmeras`,
+                details: `Exportação de ${cameras.length} câmeras para Excel.`,
+                severity: LogSeverity.BAIXA,
+                user: req.user,
+            });
+
+            return res.send(excelBuffer);
+
+        } catch (error) {
+            console.error('--- ERRO CRÍTICO em exportCameras ---', error);
+            return res.status(500).json({ message: 'Erro interno do servidor ao exportar câmeras.' });
+        }
+    }
+
     public async delete(req: Request, res: Response): Promise<Response> {
         try {
             const { user } = req;
