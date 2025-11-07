@@ -279,12 +279,12 @@ export class CameraController {
                 return res.status(403).json({ message: 'Acesso negado.' });
             }
 
+            // ✅ Caminho final certo
             const templatePath = path.resolve(
                 __dirname,
                 '..',
                 '..',
                 'uploads',
-                'templates',
                 'add_cameras_template.xlsx'
             );
 
@@ -295,14 +295,12 @@ export class CameraController {
 
             res.sendFile(templatePath);
 
-            return res;
+            return res; // ✅ evita erro TS: "void is not assignable to Response"
         } catch (error) {
             console.error('--- ERRO CRÍTICO em downloadTemplate ---', error);
             return res.status(500).json({ message: 'Erro interno ao enviar template.' });
         }
     }
-
-
 
     // ✅ EXPORTAÇÃO PADRONIZADA (mesmo formato do template)
     public async exportCameras(req: Request, res: Response): Promise<Response> {
