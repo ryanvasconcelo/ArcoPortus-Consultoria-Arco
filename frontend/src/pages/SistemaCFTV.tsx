@@ -48,7 +48,7 @@ const SistemaCFTV = () => {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      const allIds = paginatedCameras.map(camera => camera.id);
+      const allIds = filteredCameras.map(camera => camera.id);
       setSelectedCameras(allIds);
     } else {
       setSelectedCameras([]);
