@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api, setupInterceptors } from '../services/api';
 import cgaApi from '../services/cgaApi';
 import { InactivityModal } from '@/components/InactivityModal';
@@ -44,7 +44,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [showInactivityModal, setShowInactivityModal] = useState(false);
     const navigate = useNavigate();
-    const location = useLocation();
 
     // ✅ CONTROLE DE INATIVIDADE (30 minutos)
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -78,8 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const refreshToken = useCallback(async () => {
         try {
-            // ✅ CORREÇÃO: Caminho completo para refresh-token
-            const response = await api.post('/api/auth/refresh-token');
+            const response = await api.post('api/auth/refresh-token');
             const { token: newToken } = response.data;
             handleTokenUpdate(newToken);
             console.log('✅ Token renovado com sucesso');
@@ -102,11 +100,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // ✅ RESET DO TIMER DE INATIVIDADE
     const resetInactivityTimer = useCallback(() => {
-        // ⚠️ CORREÇÃO: Só inicia timer se estiver autenticado E não na página de login
-        if (!token || !user || location.pathname === '/login') {
-            return;
-        }
-
         if (inactivityTimerRef.current) {
             clearTimeout(inactivityTimerRef.current);
         }
@@ -115,19 +108,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.log('⏱️ 30 minutos de inatividade. Fazendo logout...');
             signOut(true);
         }, INACTIVITY_TIMEOUT);
-    }, [signOut, INACTIVITY_TIMEOUT, token, user, location.pathname]);
+    }, [signOut, INACTIVITY_TIMEOUT]);
 
     // ✅ MONITORA ATIVIDADE DO USUÁRIO
     useEffect(() => {
-        // ⚠️ CORREÇÃO: Só monitora se estiver autenticado E não na página de login
-        if (!token || !user || location.pathname === '/login') {
-            // Limpa qualquer timer existente
-            if (inactivityTimerRef.current) {
-                clearTimeout(inactivityTimerRef.current);
-                inactivityTimerRef.current = null;
-            }
-            return;
-        }
+        if (!token || !user) return;
 
         // Eventos que resetam o timer
         const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -151,10 +136,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             });
             if (inactivityTimerRef.current) {
                 clearTimeout(inactivityTimerRef.current);
-                inactivityTimerRef.current = null;
             }
         };
-    }, [token, user, location.pathname, resetInactivityTimer]);
+    }, [token, user, resetInactivityTimer]);
 
     // ✅ PERSISTÊNCIA APÓS RELOAD
     useEffect(() => {
