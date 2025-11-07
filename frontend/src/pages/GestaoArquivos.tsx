@@ -78,7 +78,7 @@ const GestaoArquivos = () => {
       label: "AUDITORIA",
       icon: Scale,
       color: "from-amber-500/20 to-amber-600/20",
-      public: tru
+      public: true
     },
     {
       path: "/sistema-cftv",
