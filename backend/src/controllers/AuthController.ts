@@ -22,7 +22,7 @@ export class AuthController {
 
             const userData = cgaApiResponse.data;
 
-            // ✅ CORREÇÃO #9 e #14: Verificar se usuário tem serviço "Arco Portus"
+            // ✅ VALIDAÇÃO DE SERVIÇO "Arco Portus"
             const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
 
             if (!hasArcoPortusService) {
@@ -44,7 +44,7 @@ export class AuthController {
                 return res.status(403).json({ message: 'O usuário não tem permissão para acessar este serviço.' });
             }
 
-            // Se passou na verificação, gera o token
+            // ✅ TOKEN DE 12 HORAS
             const token = jwt.sign(
                 {
                     userId: userData.userId,
@@ -56,7 +56,7 @@ export class AuthController {
                 process.env.ARCO_PORTUS_JWT_SECRET as string,
                 {
                     subject: userData.userId,
-                    expiresIn: '30m',
+                    expiresIn: '12h', // ✅ 12 HORAS
                 }
             );
 
@@ -102,7 +102,7 @@ export class AuthController {
         }
     }
 
-    // ✅ CORREÇÃO #5 e #12: Endpoint de refresh token
+    // ✅ REFRESH TOKEN COM RE-VALIDAÇÃO NO CGA
     public async refreshToken(req: Request, res: Response): Promise<Response> {
         const authHeader = req.headers.authorization;
 
@@ -119,34 +119,113 @@ export class AuthController {
                 name: string,
                 company: any,
                 role: string,
-                permissions: string[]
+                permissions: string[],
+                iat: number
             };
 
-            const userData = {
-                userId: decoded.userId,
-                name: decoded.name,
-                company: decoded.company,
-                role: decoded.role,
-                permissions: decoded.permissions,
-            };
+            // ✅ RE-VALIDAÇÃO A CADA 1 HORA
+            const tokenAge = Date.now() / 1000 - decoded.iat; // Idade do token em segundos
+            const oneHour = 60 * 60; // 1 hora em segundos
 
-            // Gerar novo token com nova expiração de 30 minutos
+            // Se o token tem mais de 1 hora, re-valida no CGA
+            if (tokenAge > oneHour) {
+                console.log('🔄 Token tem mais de 1 hora. Re-validando no CGA...');
+
+                try {
+                    const apiKey = process.env.INTERNAL_API_KEY;
+                    const cgaResponse = await axios.post(
+                        `${process.env.CGA_INTERNAL_API_URL}/internal/auth/validate-user`,
+                        { userId: decoded.userId },
+                        { headers: { 'x-internal-api-key': apiKey } }
+                    );
+
+                    const userData = cgaResponse.data;
+
+                    // Verifica se ainda tem o serviço "Arco Portus"
+                    const hasArcoPortusService = userData.services && Array.isArray(userData.services) && userData.services.includes('Arco Portus');
+
+                    if (!hasArcoPortusService) {
+                        console.log('❌ Usuário perdeu acesso ao serviço "Arco Portus"');
+                        logAction({
+                            action: 'TOKEN_REFRESH_DENIED',
+                            module: 'AUTH',
+                            target: decoded.name,
+                            details: `Token refresh negado: Usuário ${decoded.name} não possui mais o serviço "Arco Portus".`,
+                            severity: LogSeverity.ALTA,
+                            user: {
+                                userId: decoded.userId,
+                                name: decoded.name,
+                                company: decoded.company,
+                                role: decoded.role,
+                                permissions: [],
+                            },
+                        });
+                        return res.status(403).json({ message: 'Acesso ao serviço foi revogado.' });
+                    }
+
+                    // ✅ Atualiza com novas permissões do CGA
+                    const newToken = jwt.sign(
+                        {
+                            userId: userData.userId,
+                            name: userData.name,
+                            company: userData.company,
+                            role: userData.role,
+                            permissions: userData.permissions, // Permissões atualizadas
+                        },
+                        process.env.ARCO_PORTUS_JWT_SECRET as string,
+                        {
+                            subject: userData.userId,
+                            expiresIn: '12h',
+                        }
+                    );
+
+                    logAction({
+                        action: 'TOKEN_REFRESH_VALIDATED',
+                        module: 'AUTH',
+                        target: userData.name,
+                        details: `Token renovado e re-validado no CGA para ${userData.name}.`,
+                        severity: LogSeverity.BAIXA,
+                        user: userData,
+                    });
+
+                    return res.status(200).json({ token: newToken });
+
+                } catch (cgaError) {
+                    console.error('❌ Erro ao validar no CGA:', cgaError);
+                    // Se falhar a validação no CGA, nega o refresh
+                    return res.status(401).json({ message: 'Falha na validação com o servidor de autenticação.' });
+                }
+            }
+
+            // ✅ Se token tem menos de 1 hora, apenas renova sem re-validar
             const newToken = jwt.sign(
-                userData,
+                {
+                    userId: decoded.userId,
+                    name: decoded.name,
+                    company: decoded.company,
+                    role: decoded.role,
+                    permissions: decoded.permissions,
+                },
                 process.env.ARCO_PORTUS_JWT_SECRET as string,
                 {
-                    subject: userData.userId,
-                    expiresIn: '30m',
+                    subject: decoded.userId,
+                    expiresIn: '12h',
                 }
             );
 
             logAction({
                 action: 'TOKEN_REFRESH',
                 module: 'AUTH',
-                target: userData.name,
-                details: `Token renovado para o usuário ${userData.name}.`,
+                target: decoded.name,
+                details: `Token renovado para ${decoded.name}.`,
                 severity: LogSeverity.BAIXA,
-                user: userData,
+                user: {
+                    userId: decoded.userId,
+                    name: decoded.name,
+                    company: decoded.company,
+                    role: decoded.role,
+                    permissions: decoded.permissions,
+                },
             });
 
             return res.status(200).json({ token: newToken });

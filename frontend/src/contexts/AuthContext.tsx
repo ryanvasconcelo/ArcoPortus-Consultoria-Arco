@@ -1,9 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import { api, setupInterceptors } from '../services/api';
 import cgaApi from '../services/cgaApi';
-import { toast } from 'sonner';
+import { InactivityModal } from '@/components/InactivityModal';
 
 interface User {
     name: string;
@@ -42,9 +42,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [token, setToken] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [showInactivityModal, setShowInactivityModal] = useState(false);
     const navigate = useNavigate();
 
-    // ✅ CORREÇÃO #13: Logout com mensagem
+    // ✅ CONTROLE DE INATIVIDADE (30 minutos)
+    const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos em ms
+
     const signOut = useCallback((showMessage = false) => {
         localStorage.removeItem('@ArcoPortus:user');
         localStorage.removeItem('@ArcoPortus:token');
@@ -52,11 +56,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(null);
         setToken('');
 
-        if (showMessage) {
-            toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+        // Limpa timer de inatividade
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+            inactivityTimerRef.current = null;
         }
 
-        navigate('/login');
+        if (showMessage) {
+            setShowInactivityModal(true);
+        } else {
+            navigate('/login');
+        }
     }, [navigate]);
 
     const handleTokenUpdate = useCallback((newToken: string) => {
@@ -65,7 +75,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     }, []);
 
-    // ✅ CORREÇÃO #5 e #12: Renovação de token
     const refreshToken = useCallback(async () => {
         try {
             const response = await api.post('/auth/refresh-token');
@@ -73,21 +82,71 @@ export function AuthProvider({ children }: AuthProviderProps) {
             handleTokenUpdate(newToken);
             console.log('✅ Token renovado com sucesso');
             return newToken;
-        } catch (error) {
+        } catch (error: any) {
             console.error('❌ Erro ao renovar token:', error);
-            signOut(true);
+
+            // Se for 403, usuário perdeu acesso
+            if (error.response?.status === 403) {
+                setShowInactivityModal(true);
+                setTimeout(() => {
+                    signOut(false);
+                }, 3000);
+            } else {
+                signOut(true);
+            }
             throw error;
         }
     }, [handleTokenUpdate, signOut]);
 
-    // ✅ CORREÇÃO #15: Persistência de dados após reload
+    // ✅ RESET DO TIMER DE INATIVIDADE
+    const resetInactivityTimer = useCallback(() => {
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+        }
+
+        inactivityTimerRef.current = setTimeout(() => {
+            console.log('⏱️ 30 minutos de inatividade. Fazendo logout...');
+            signOut(true);
+        }, INACTIVITY_TIMEOUT);
+    }, [signOut, INACTIVITY_TIMEOUT]);
+
+    // ✅ MONITORA ATIVIDADE DO USUÁRIO
+    useEffect(() => {
+        if (!token || !user) return;
+
+        // Eventos que resetam o timer
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+        const handleActivity = () => {
+            resetInactivityTimer();
+        };
+
+        // Adiciona listeners
+        events.forEach(event => {
+            window.addEventListener(event, handleActivity);
+        });
+
+        // Inicia o timer
+        resetInactivityTimer();
+
+        // Cleanup
+        return () => {
+            events.forEach(event => {
+                window.removeEventListener(event, handleActivity);
+            });
+            if (inactivityTimerRef.current) {
+                clearTimeout(inactivityTimerRef.current);
+            }
+        };
+    }, [token, user, resetInactivityTimer]);
+
+    // ✅ PERSISTÊNCIA APÓS RELOAD
     useEffect(() => {
         const storagedUser = localStorage.getItem('@ArcoPortus:user');
         const storagedToken = localStorage.getItem('@ArcoPortus:token');
 
         if (storagedToken && storagedUser) {
             try {
-                // Validar se o token ainda é válido
                 const decoded: { exp: number } = jwtDecode(storagedToken);
                 const now = Date.now() / 1000;
 
@@ -111,14 +170,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsInitialized(true);
     }, [handleTokenUpdate]);
 
-    // ✅ CORREÇÃO #5, #12, #13: Setup dos interceptors após inicialização
+    // ✅ SETUP DOS INTERCEPTORS
     useEffect(() => {
         if (isInitialized) {
-            setupInterceptors(signOut, refreshToken);
+            setupInterceptors(signOut, refreshToken, resetInactivityTimer);
         }
-    }, [isInitialized, signOut, refreshToken]);
+    }, [isInitialized, signOut, refreshToken, resetInactivityTimer]);
 
-    // ✅ CORREÇÃO #13: Verificação periódica de expiração (fallback)
+    // ✅ VERIFICAÇÃO PERIÓDICA DE EXPIRAÇÃO
     useEffect(() => {
         if (!token) return;
 
@@ -128,7 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const expirationTime = decodedToken.exp * 1000;
                 const now = Date.now();
                 const timeUntilExpiration = expirationTime - now;
-                const refreshThreshold = 5 * 60 * 1000; // 5 minutos
+                const refreshThreshold = 30 * 60 * 1000; // 30 minutos
 
                 if (timeUntilExpiration < refreshThreshold && timeUntilExpiration > 0) {
                     console.log('⚠️ Token próximo de expirar. Renovando...');
@@ -145,11 +204,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
         };
 
-        // Verifica imediatamente
         checkTokenExpiration();
-
-        // Verifica a cada 1 minuto
-        const interval = setInterval(checkTokenExpiration, 60 * 1000);
+        const interval = setInterval(checkTokenExpiration, 5 * 60 * 1000); // A cada 5 minutos
 
         return () => clearInterval(interval);
     }, [token, signOut, refreshToken]);
@@ -176,16 +232,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.log('✅ Login realizado com sucesso');
         } catch (error: any) {
             console.error('❌ Erro no login:', error);
-            if (error.response?.status === 403) {
-                toast.error('Você não tem permissão para acessar este serviço.');
-            }
             throw error;
         }
     }
 
+    const handleModalClose = () => {
+        setShowInactivityModal(false);
+        navigate('/login');
+    };
+
     return (
         <AuthContext.Provider value={{ user, token, loading, signIn, signOut: () => signOut(false), refreshToken }}>
             {isInitialized ? children : <div className="flex items-center justify-center h-screen">Carregando...</div>}
+            {showInactivityModal && <InactivityModal onClose={handleModalClose} />}
         </AuthContext.Provider>
     );
 }
