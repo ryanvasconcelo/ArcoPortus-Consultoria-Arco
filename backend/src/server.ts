@@ -21,8 +21,6 @@ if (configResult.error) {
     console.log('[DIAGNÓSTICO] Arquivo .env carregado com SUCESSO.');
     console.log('[DIAGNÓSTICO] Chaves encontradas:', Object.keys(configResult.parsed || {}));
 }
-console.log(`[DIAGNÓSTICO] Valor de INTERNAL_API_KEY: [${process.env.INTERNAL_API_KEY}]`);
-console.log('--- FIM DO DIAGNÓSTICO ---');
 // --- FIM DO DIAGNÓSTICO DOTENV ---
 
 import express from 'express';

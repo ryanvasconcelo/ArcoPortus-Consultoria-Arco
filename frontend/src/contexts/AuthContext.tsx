@@ -78,7 +78,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const refreshToken = useCallback(async () => {
         try {
-            const response = await api.post('/auth/refresh-token');
+            // ✅ CORREÇÃO: Caminho completo para refresh-token
+            const response = await api.post('/api/auth/refresh-token');
             const { token: newToken } = response.data;
             handleTokenUpdate(newToken);
             console.log('✅ Token renovado com sucesso');
