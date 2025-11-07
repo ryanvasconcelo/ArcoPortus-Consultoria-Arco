@@ -8,9 +8,17 @@ import {
   Scale
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GestaoArquivos = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // ✅ Função para verificar permissão
+  const hasPermission = (permission: string) => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(permission);
+  };
 
   const services = [
     {
@@ -18,60 +26,82 @@ const GestaoArquivos = () => {
       label: "ARESP",
       icon: ClipboardCheck,
       color: "from-blue-500/20 to-blue-600/20",
-      external: true
+      external: true,
+      public: true // ✅ Sempre visível
     },
     {
       path: "/diagnostico-ear",
       label: "DIAGNÓSTICO DO EAR",
       icon: FileText,
-      color: "from-purple-500/20 to-purple-600/20"
+      color: "from-purple-500/20 to-purple-600/20",
+      permission: 'VIEW:DIAGNOSTIC' // ✅ Requer permissão
     },
     {
       path: "/normas-procedimentos",
       label: "NORMAS E PROCEDIMENTOS",
       icon: FileText,
-      color: "from-green-500/20 to-green-600/20"
+      color: "from-green-500/20 to-green-600/20",
+      permission: 'VIEW:NORMS' // ✅ Requer permissão
     },
     {
       path: "/documentos-registros",
       label: "DOCUMENTOS E REGISTROS",
       icon: FileText,
-      color: "from-orange-500/20 to-orange-600/20"
+      color: "from-orange-500/20 to-orange-600/20",
+      permission: 'VIEW:REGISTERS' // ✅ Requer permissão
     },
     {
       path: "https://app.accia.com.br/site/login",
       label: "GESTÃO DE OCORRÊNCIAS",
       icon: FileText,
       color: "from-yellow-500/20 to-yellow-600/20",
-      external: true
+      external: true,
+      public: true // ✅ Sempre visível
     },
     {
       path: "/legislacao",
       label: "LEGISLAÇÃO",
       icon: FileText,
-      color: "from-indigo-500/20 to-indigo-600/20"
+      color: "from-indigo-500/20 to-indigo-600/20",
+      permission: 'VIEW:LEGISLATION' // ✅ Requer permissão
     },
     {
       path: "https://v2.findme.id/login",
       label: "GESTÃO DE ROTINAS OPERACIONAIS",
       icon: FileText,
       color: "from-pink-500/20 to-pink-600/20",
-      external: true
+      external: true,
+      public: true // ✅ Sempre visível
     },
-    // ✅ CORREÇÃO #2: Card de Treinamento REMOVIDO, Card de Auditoria ADICIONADO
     {
       path: "/auditoria",
       label: "AUDITORIA",
       icon: Scale,
-      color: "from-amber-500/20 to-amber-600/20"
+      color: "from-amber-500/20 to-amber-600/20",
+      permission: 'VIEW:AUDIT' // ✅ Requer permissão (opcional, ajustar conforme necessário)
     },
     {
       path: "/sistema-cftv",
       label: "SISTEMA DE CFTV",
       icon: Camera,
-      color: "from-red-500/20 to-red-600/20"
+      color: "from-red-500/20 to-red-600/20",
+      permission: 'VIEW:CFTV' // ✅ Requer permissão
     },
   ];
+
+  // ✅ Filtra serviços baseado em permissões
+  const visibleServices = services.filter(service => {
+    // Se é público, sempre visível
+    if (service.public) return true;
+
+    // Se tem permissão requerida, verifica
+    if (service.permission) {
+      return hasPermission(service.permission);
+    }
+
+    // Se não tem permissão definida, é visível
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -88,7 +118,7 @@ const GestaoArquivos = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service) => {
+              {visibleServices.map((service) => {
                 const Icon = service.icon;
                 return (
                   <Card
