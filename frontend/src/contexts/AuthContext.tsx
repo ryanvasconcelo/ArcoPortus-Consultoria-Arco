@@ -75,6 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     }, []);
 
+    
     const refreshToken = useCallback(async () => {
         try {
             const response = await api.post('api/auth/refresh-token');
