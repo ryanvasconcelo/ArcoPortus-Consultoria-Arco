@@ -96,9 +96,7 @@ const App = () => (
                 <Route
                   path="/auditoria"
                   element={
-                    <PermissionRoute permission="VIEW:AUDIT">
-                      <Auditoria />
-                    </PermissionRoute>
+                    <Auditoria />
                   }
                 />
                 <Route

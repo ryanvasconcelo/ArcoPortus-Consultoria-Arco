@@ -78,7 +78,7 @@ const GestaoArquivos = () => {
       label: "AUDITORIA",
       icon: Scale,
       color: "from-amber-500/20 to-amber-600/20",
-      permission: 'VIEW:AUDIT' // ✅ Requer permissão (opcional, ajustar conforme necessário)
+      public: tru
     },
     {
       path: "/sistema-cftv",

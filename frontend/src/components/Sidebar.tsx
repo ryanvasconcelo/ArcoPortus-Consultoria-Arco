@@ -32,7 +32,6 @@ const Sidebar = () => {
     { path: "/legislacao", label: "LEGISLAÇÃO", icon: FileText, permission: 'VIEW:LEGISLATION' },
     { path: "https://v2.findme.id/login", label: "GESTÃO DE ROTINAS OPERACIONAIS", icon: FileText, external: true },
     { path: "/sistema-cftv", label: "SISTEMA DE CFTV", icon: Camera, permission: 'VIEW:CFTV' },
-    { path: "/auditoria", label: "AUDITORIA", icon: Shield, permission: 'VIEW:AUDIT' },
   ];
 
   return (
