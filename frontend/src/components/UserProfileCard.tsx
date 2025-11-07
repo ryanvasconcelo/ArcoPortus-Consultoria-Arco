@@ -37,7 +37,7 @@ export function UserProfileCard({ user, onLogout }: UserProfileCardProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-auto p-2 hover:bg-muted/50">
+        <Button variant="ghost" className="h-auto p-2">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
               {user.avatar ? (
