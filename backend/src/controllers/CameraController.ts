@@ -270,69 +270,39 @@ export class CameraController {
         }
     }
 
-    // ✅ TEMPLATE PADRONIZADO (CSV → XLSX)
     public async downloadTemplate(req: Request, res: Response): Promise<Response> {
         try {
             const { user } = req;
             const requiredPermission = 'VIEW:CFTV';
+
             if (!user.permissions.includes(requiredPermission)) {
                 return res.status(403).json({ message: 'Acesso negado.' });
             }
 
-            const templateData = [
-                {
-                    'Unidade de negócio': 'Porto Principal',
-                    'Nº câmera': '006 - sala de reunião',
-                    'Local de instalação': 'Departamento Pessoal',
-                    'Em funcionamento ?': 'Sim',
-                    'Tipo': 'Dome',
-                    'Área externa / Interna': 'Interna',
-                    'Fabricante': 'Intelbras',
-                    'Modelo': 'Intelbras VIP 3230',
-                    'Possui analítico?': 'Sim',
-                    'Dias de gravação': '180 dias e 23,4 horas',
-                    'IP (cada IP deve ser único)': '123.456.7.89',
-                },
-                {
-                    'Unidade de negócio': 'Porto Secundário',
-                    'Nº câmera': '007 - Portaria',
-                    'Local de instalação': 'Entrada Principal',
-                    'Em funcionamento ?': 'Sim',
-                    'Tipo': 'Bullet',
-                    'Área externa / Interna': 'Externa',
-                    'Fabricante': 'Hikvision',
-                    'Modelo': 'DS-2CD2T47G2-L',
-                    'Possui analítico?': 'Não',
-                    'Dias de gravação': '90 dias e 12,0 horas',
-                    'IP (cada IP deve ser único)': '192.168.1.10',
-                }
-            ];
+            const templatePath = path.resolve(
+                __dirname,
+                '..',
+                '..',
+                'uploads',
+                'templates',
+                'add_cameras_template.xlsx'
+            );
 
-            const workSheet = XLSX.utils.json_to_sheet(templateData);
-            const workBook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workBook, workSheet, 'Template');
+            res.setHeader(
+                'Content-Disposition',
+                'attachment; filename=template_importacao_cameras.xlsx'
+            );
 
-            const excelBuffer = XLSX.write(workBook, { bookType: 'xlsx', type: 'buffer' });
+            res.sendFile(templatePath);
 
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader('Content-Disposition', 'attachment; filename=template_importacao_cameras.xlsx');
-
-            logAction({
-                action: 'DOWNLOAD_TEMPLATE',
-                module: 'CFTV',
-                target: `Template de Importação de Câmeras`,
-                details: `Download do template de importação de câmeras.`,
-                severity: LogSeverity.BAIXA,
-                user: req.user,
-            });
-
-            return res.send(excelBuffer);
-
+            return res;
         } catch (error) {
             console.error('--- ERRO CRÍTICO em downloadTemplate ---', error);
-            return res.status(500).json({ message: 'Erro interno do servidor ao gerar template.' });
+            return res.status(500).json({ message: 'Erro interno ao enviar template.' });
         }
     }
+
+
 
     // ✅ EXPORTAÇÃO PADRONIZADA (mesmo formato do template)
     public async exportCameras(req: Request, res: Response): Promise<Response> {

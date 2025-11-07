@@ -44,6 +44,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/cameras', cameraRoutes);
 app.use('/api/audit', auditRoutes);
+app.use(
+    '/static/templates',
+    express.static(path.join(__dirname, '..', 'uploads', 'templates'))
+);
 
 // --- MUDANÇA: Capturar o 'server' e iniciar o Cron Job ---
 const server = app.listen(PORT, () => {
